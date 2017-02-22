@@ -1,0 +1,40 @@
+import sys
+import re
+
+from PIL import Image
+from PIL import ImageFont
+from PIL import ImageDraw 
+
+
+#run this script like "python generatethumbnail.py <name of vcard file>" 
+
+#this document is a set of instructions so you can figure out how to write the code to extract strings from VCARD and paste them
+#onto a virtual business card. This script should take in one VCARD as an argument and save a png image.
+
+#the first thing you must do is open the vcard in question. The easiest thing to do is open it with an argument from the command line.
+
+	file = sys.argv[1]
+	f = open(file)
+	contents = f.read()
+
+#the next thing to do is read the file line by line and remove everything before the first colon. 
+	
+	for line in f: 
+		#do something to figure out if the line is a Full Name, Email, Telephone Number, Picture, etc.
+		line = line.split(':', 1) [-1]
+		    #'line' should be pasted onto the business card
+		
+		
+		
+
+#the following code is an example on how you can paste text onto a template business card image.
+#you should paste the image from the vcard (if it has one) on the top left corner. Then, place the name, email, business, etc.
+#directly to the right of the image, moving down. You will have to figure out the coordinates to get this working.
+	
+	img = Image.open("template.png") #current size is 350x200
+	draw = ImageDraw.Draw(img)
+	# font = ImageFont.truetype(<font-file>, <font-size>)
+	font = ImageFont.truetype("sans-serif.ttf", 16)
+	# draw.text((x, y),"Sample Text",(r,g,b))
+	draw.text((0, 0),"Sample Text",(255,255,255),font=font)
+	img.save('~./vcfthumbnails/completed-vcard.png') #image name should be same as vcard name
