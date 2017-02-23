@@ -6,6 +6,7 @@ from PIL import ImageFont
 from PIL import ImageDraw
 
 temp_thumb_file = 'thumbnail_tmp.jpg'
+max_param_length = 34
 X = 154
 Y = 20
 OFF = 20
@@ -121,8 +122,11 @@ def card_to_thumbnail(card_lines, params=['FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'E
             param, value = line.strip().split(':')
             p1, *_ = param.split(';')
             if (p1 in params) and (p1 not in card_data):
-                card_data[p1], *_ = value.strip().split(";")
-                # card_data[p1], *_ = " ".join(value.split(';')).strip()
+                # card_data[p1], *_ = value.strip().split(";")
+                temp = " ".join(value.split(';')).strip()
+                if len(temp) > max_param_length :    # cut long string
+                    temp = temp[:max_param_length]
+                card_data[p1] = temp
 
     create_thumbnail(params, card_data)
 
