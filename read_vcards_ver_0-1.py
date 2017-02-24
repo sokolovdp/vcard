@@ -6,7 +6,8 @@ from PIL import ImageFont
 from PIL import ImageDraw
 
 temp_thumb_file = 'thumbnail_tmp.jpg'
-max_param_length = 34
+stand_pars = ['FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL', 'PHOTO']
+max_param_length = 24
 X = 154
 Y = 20
 OFF = 20
@@ -16,7 +17,7 @@ pic_offset = (2, 2)
 text_color = (0, 0, 0)
 background_color = (255, 255, 255, 255)
 font_size = 10
-font_file = "Roboto-Regular.ttf"
+font_file = "Roboto-Regular.ttf"   # can be used instead of default font
 
 
 def load_vcards(lines):  # form list of lines for each vcard, begin line excluded
@@ -93,7 +94,8 @@ def get_photo(card_lines):
 def create_thumbnail(params, card_data):
     background = Image.new('RGBA', thumb_size, background_color)  # current size is 350x200
     draw = ImageDraw.Draw(background)
-    font = ImageFont.truetype(font_file, font_size)  # font = ImageFont.truetype(<font-file>, <font-size>)
+    #font = ImageFont.truetype(font_file, font_size)
+    font = ImageFont.load_default()
 
     if ('PHOTO' in params) and (card_data['PHOTO'] != ''):
         img = Image.open(card_data['PHOTO'], 'r')
@@ -103,13 +105,13 @@ def create_thumbnail(params, card_data):
     offset = Y
     for par in params:
         if par != 'PHOTO':
-            draw.text((X, offset), par + ':  ' + card_data[par], text_color, font=font)
+            draw.text((X, offset), par + ': ' + card_data[par], text_color, font=font)
             offset += OFF
 
     background.save((card_data['FN'].lower() + '.png').replace(' ', '_'))
 
 
-def card_to_thumbnail(card_lines, params=['FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL', 'PHOTO']):
+def card_to_thumbnail(card_lines, params=stand_pars):
     card_data = dict()
 
     if 'PHOTO' in params:  # process PHOTO parameter if present
@@ -133,9 +135,14 @@ def card_to_thumbnail(card_lines, params=['FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'E
 
 def main(argv):
 
-    file = argv
+    file = argv[0]
     with open(file, encoding="utf8") as f:
         data = f.readlines()
+
+    dirname= file.lower().split('.')[0] + ".thumbs"
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    os.chdir(dirname)
 
     list_of_cards = load_vcards(data)
     if list_of_cards:
