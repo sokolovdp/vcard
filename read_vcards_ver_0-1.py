@@ -132,11 +132,11 @@ def card_to_thumbnail(card_lines, params=stand_pars):
 
 def main(argv):
 
-    file = argv[0]
-    with open(file, encoding="utf8") as f:
+    vcard_file = argv[0]
+    with open(vcard_file, encoding="utf8") as f:
         data = f.readlines()
 
-    dirname= file.lower().split('.')[0] + ".thumbs"
+    dirname= vcard_file.lower().split('.')[0] + ".thumbs"
     if not os.path.exists(dirname):
         os.makedirs(dirname)
     os.chdir(dirname)
