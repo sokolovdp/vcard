@@ -1,5 +1,5 @@
 
-import os
+import os, sys, getopt
 import base64
 from PIL import Image
 from PIL import ImageFont
@@ -131,8 +131,9 @@ def card_to_thumbnail(card_lines, params=['FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'E
     create_thumbnail(params, card_data)
 
 
-def main():
-    file = "vcard_test.vcf"
+def main(argv):
+
+    file = argv
     with open(file, encoding="utf8") as f:
         data = f.readlines()
 
@@ -146,4 +147,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
+
+
