@@ -31,7 +31,6 @@ def load_vcards(lines):  # form list of lines for each vcard, begin line exclude
             if "BEGIN" in param:
                 if not inside_card:
                     inside_card = True
-                    # card_lines.append(line)
                 else:
                     print("invalid vcard format: END line missing")
                     return None
@@ -64,7 +63,6 @@ def decode_data(index, lines, pars, value):
             photo_data += line.strip()
 
     # we ignore parameters of encoding in pars list
-
     imgdata = base64.b64decode(photo_data)
     with open(temp_thumb_file, 'wb') as f:
         f.write(imgdata)
@@ -75,7 +73,7 @@ def decode_data(index, lines, pars, value):
 def get_photo(card_lines):
     photo_file = ''
 
-    for index, line in enumerate(card_lines):  # process others parameters
+    for index, line in enumerate(card_lines):
         if ":" in line:  # parameter line 
             param, value = line.strip().split(':')
             p, *p_var = param.split(';')
@@ -92,7 +90,7 @@ def get_photo(card_lines):
 
 
 def create_thumbnail(params, card_data):
-    background = Image.new('RGBA', thumb_size, background_color)  # current size is 350x200
+    background = Image.new('RGBA', thumb_size, background_color)
     draw = ImageDraw.Draw(background)
     #font = ImageFont.truetype(font_file, font_size)
     font = ImageFont.load_default()
@@ -124,7 +122,6 @@ def card_to_thumbnail(card_lines, params=stand_pars):
             param, value = line.strip().split(':')
             p1, *_ = param.split(';')
             if (p1 in params) and (p1 not in card_data):
-                # card_data[p1], *_ = value.strip().split(";")
                 temp = " ".join(value.split(';')).strip()
                 if len(temp) > max_param_length :    # cut long string
                     temp = temp[:max_param_length]
@@ -150,7 +147,7 @@ def main(argv):
             card_to_thumbnail(card)
         print("loaded {} vcards".format(len(list_of_cards)))
 
-    os.remove(temp_thumb_file)  # remove temporal jpg file
+        os.remove(temp_thumb_file)  # remove temporal jpg file
 
 
 if __name__ == '__main__':
