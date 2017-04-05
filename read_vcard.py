@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# "THE BEER-WARE LICENSE" (Revision 42):
+# Dmitrii Sokolov <sokolovdp@gmail.com> wrote this file. As long as you retain
+# this notice you can do whatever you want with this stuff. If we meet some day,
+# and you think this stuff is worth it, you can buy me a beer in return
+#   source code: https://github.com/sokolovdp/vcard/blob/master/read_vcard.py
+# The idea of "beer license" was borrowed from Terry Yin <terry.yinzhe@gmail.com>
+#    https://github.com/terryyin/google-translate-python
+# ----------------------------------------------------------------------------
+
 import os
 import sys
 import base64
@@ -144,7 +155,7 @@ def main(vcard_file):
     if list_of_cards:
         for card in list_of_cards:
             card_to_thumbnail(card)
-        print("loaded {} vcards".format(len(list_of_cards)))
+        # print("loaded {} vcards".format(len(list_of_cards)))
 
         os.remove(temp_thumb_file)  # remove temporal jpg file
 
