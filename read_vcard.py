@@ -36,7 +36,6 @@ def load_vcards(lines):  # form list of lines for each vcard, begin line exclude
     all_cards = list()
     card_lines = list()
     inside_card = False
-
     for line in lines:
         if ":" in line:  # parameter line 
             param, value = line.strip().split(':')
@@ -61,30 +60,30 @@ def load_vcards(lines):  # form list of lines for each vcard, begin line exclude
             card_lines.append(line)
         else:
             continue
-
     return all_cards
 
 
-def decode_data(index, lines, pars, value):
+def decode_data(index, lines, value):
     photo_data = value
-
     for line in lines[index + 1:]:
         if "END:VCARD" in line:
             break
         else:
             photo_data += line.strip()
-
-    # we ignore parameters of encoding in pars list
-    imgdata = base64.b64decode(photo_data)
-    with open(temp_thumb_file, 'wb') as f:
-        f.write(imgdata)
-
-    return temp_thumb_file
+    # ignore parameters of encoding in pars list
+    try:
+        imgdata = base64.b64decode(photo_data)
+    except:
+        print('error in base64 encoding, data ignored')
+        return ''
+    else:
+        with open(temp_thumb_file, 'wb') as f:
+            f.write(imgdata)
+        return temp_thumb_file
 
 
 def get_photo(card_lines):
     photo_file = ''
-
     for index, line in enumerate(card_lines):
         if ":" in line:  # parameter line 
             param, value = line.strip().split(':')
@@ -95,68 +94,58 @@ def get_photo(card_lines):
                     break
                 else:
                     # data is in the list, so we have to decode them
-                    photo_file = decode_data(index, card_lines, p_var, value)
+                    photo_file = decode_data(index, card_lines, value)
                     break
-
     return photo_file
 
 
-def create_thumbnail(params, card_data):
+def create_thumbnail(card_info):
     background = Image.new('RGBA', thumb_size, background_color)
     draw = ImageDraw.Draw(background)
     # font = ImageFont.truetype(font_file, font_size)
     font = ImageFont.load_default()
-
-    if ('PHOTO' in params) and (card_data['PHOTO'] != ''):
-        img = Image.open(card_data['PHOTO'], 'r')
+    params_list = list(card_info.keys())
+    if ('PHOTO' in params_list) and (card_info['PHOTO'] != ''):
+        img = Image.open(card_info['PHOTO'], 'r')
         small_img = img.resize(small_size)
         background.paste(small_img, pic_offset)
-
     offset = Y
-    for par in params:
+    for par in params_list:
         if par != 'PHOTO':
-            draw.text((X, offset), par + ': ' + card_data[par], text_color, font=font)
+            draw.text((X, offset), par + ': ' + card_info[par], text_color, font=font)
             offset += OFF
+    background.save((card_info['FN'].lower() + '.png').replace(' ', '_'))
 
-    background.save((card_data['FN'].lower() + '.png').replace(' ', '_'))
 
-
-def card_to_thumbnail(card_lines, params=stand_pars):
+def card_to_thumbnail(card_lines):
     card_data = dict()
-
-    if 'PHOTO' in params:  # process PHOTO parameter if present
-        card_data['PHOTO'] = result = get_photo(card_lines)
-        if result == '':
-            print("unable to load PHOTO data, parameter ignored")
-
+    if 'PHOTO' in stand_pars:  # process PHOTO par if present standard parameters
+        result = get_photo(card_lines)
+        if result != '':
+            card_data['PHOTO'] = result
     for line in card_lines:  # process others parameters
         if ":" in line:  # parameter line 
             param, value = line.strip().split(':')
             p1, *_ = param.split(';')
-            if (p1 in params) and (p1 not in card_data):
+            if (p1 in stand_pars) and (p1 not in card_data):
                 temp = " ".join(value.split(';')).strip()
                 if len(temp) > max_param_length:  # cut long string
                     temp = temp[:max_param_length]
                 card_data[p1] = temp
-
-    create_thumbnail(params, card_data)
+    create_thumbnail(card_data)
 
 
 def main(vcard_file):
     with open(vcard_file, encoding="utf8") as f:
         data = f.readlines()
-
     dirname = vcard_file.lower().split('.')[0] + ".thumbs"
     if not os.path.exists(dirname):
         os.makedirs(dirname)
     os.chdir(dirname)
-
     list_of_cards = load_vcards(data)
     if list_of_cards:
         for card in list_of_cards:
             card_to_thumbnail(card)
-        # print("loaded {} vcards".format(len(list_of_cards)))
-
         os.remove(temp_thumb_file)  # remove temporal jpg file
 
 
