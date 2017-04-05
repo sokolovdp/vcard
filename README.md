@@ -1,7 +1,8 @@
-# vcard
+# vcard_read
 
 To run program vcard_read.py on Ubuntu:
 
-1) make sure that python3 and all needed packages are installed
-2) chmod +x vcard_read.py - change mode to executable
-3) alias vcardread = '/.../read_vcard.py' - to create alias, to make it permanent edit bashrc: gedit ~/.bashrc
+1) make sure that python3 and all needed packages are installed: os, sys, base64, PIL
+2) change mode of the file to executable:  chmod +x vcard_read.py
+3) copy vcard_read.py into Nautilus scripts folder: ~/.local/share/nautilus/scripts
+4) once you have done all this, the script will be accessible from the scripts sub-menu of the right click menu in Nautilus.
