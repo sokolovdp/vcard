@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.0.1 April, 8 2017
+# Version 2.0.2 April, 9 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -40,7 +40,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
     p_vcard = re.compile(vcard_format, re.DOTALL)
     photo_format = "PHOTO;(?P<photo>.*?)/9k=\n"
     p_photo = re.compile(photo_format, re.DOTALL)
-    param_format = "(?P<param>[A-Z]+);(?P<value>.*?)\n"
+    param_format = "(?P<param>.*?):(?P<value>.*?)\n"
     p_param = re.compile(param_format)
     cards_list = list()
 
@@ -70,8 +70,11 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
         n_given = False
         fn_given = False
         for match3 in p_param.finditer(vcard_text):  # find other parameters
-            param = match3.group('param').strip()
-            value = match3.group('value').split(':')[1].replace(';', ' ').strip()
+            params = match3.group('param').split(';')
+            values = match3.group('value').split(';')
+            param = params[0]
+            value = values[0]
+            # print(params, params[0], values, values[0])    # debug
             if param == 'N':
                 n_given = True
             if param == 'FN':
@@ -91,6 +94,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
         else:
             print("no valid parameters in data, VCARD ignored")
     print("loaded vcards: {} from file: {}".format(len(cards_list), filename))
+    #  exit()  # debug
     return cards_list
 
 
@@ -109,7 +113,8 @@ def create_thumbnail(card_info):
         else:
             draw.text((x, y), '%s:%s' % (param.lower(), card_info[param]), text_color, font=font)
             y += OFF
-    thumb_file = card_info['FN'].replace(' ', '_') + '.png'
+    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_'))
+    thumb_file += '.png'
     if os.path.isfile(thumb_file):
         print('duplicated vcard and thumb file names: {} VCARD ignored'.format(thumb_file))
     else:
