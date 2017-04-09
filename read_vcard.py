@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.0.2 April, 9 2017
+# Version 2.1.0 April, 10 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -13,15 +13,15 @@
 
 import os
 import sys
-import base64
 import io
-import shutil
 import re
+import shutil
+import base64
+import platform
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 
-temp_thumb_file = 'thumbnail_tmp.jpg'
 stand_pars = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
 X = 154
 Y = 20
@@ -31,6 +31,10 @@ thumb_size = (350, 200)
 pic_offset = (2, 2)
 text_color = (0, 0, 0)
 background_color = (255, 255, 255, 255)
+windows_font = 'ariali.ttf'
+font_size_windows = 12
+linux_font = '/usr/share/fonts/truetype/freemono/FreeMono.ttf'
+font_size_linux = 10
 
 
 def load_vcards(filename):  # parse VCF file into list of dicts with vcard params
@@ -69,7 +73,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
                 vcard_text += tail
         n_given = False
         fn_given = False
-        for match3 in p_param.finditer(vcard_text):  # find other parameters
+        for match3 in p_param.finditer(vcard_text):  # parse other parameters
             params = match3.group('param').split(';')
             values = match3.group('value').split(';')
             param = params[0]
@@ -98,22 +102,22 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
     return cards_list
 
 
-def create_thumbnail(card_info):
-    font = ImageFont.load_default()
+def create_thumbnail(card_info, font_truetype):
     background = Image.new('RGBA', thumb_size, background_color)
     draw = ImageDraw.Draw(background)
     y = Y
     x = X
     if 'PHOTO' not in card_info.keys():
         x = X - 100
+        y = Y + 20
     for param in list(card_info.keys()):
         if param == 'PHOTO':
             smaller_img = card_info['PHOTO'].resize(small_size)
             background.paste(smaller_img, pic_offset)
         else:
-            draw.text((x, y), '%s:%s' % (param.lower(), card_info[param]), text_color, font=font)
+            draw.text((x, y), '%s: %s' % (param.lower(), card_info[param]), text_color, font=font_truetype)
             y += OFF
-    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_'))
+    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_')).replace('\n', ' ')
     thumb_file += '.png'
     if os.path.isfile(thumb_file):
         print('duplicated vcard and thumb file names: {} VCARD ignored'.format(thumb_file))
@@ -124,6 +128,33 @@ def create_thumbnail(card_info):
             print("IO error during writing thumb file:", thumb_file)
 
 
+def load_truetype_font():  # check which OS is running and install proper truetype font
+    font = None
+    os_name = platform.system()
+    if os_name == 'Windows':
+        try:
+            font = ImageFont.truetype(font=windows_font, size=font_size_windows, encoding='unic')
+        except OSError:
+            print("cannot locate Windows font:", windows_font)
+            exit()
+        except IOError:
+            print("cannot open Windows font:", windows_font)
+            exit()
+    elif os_name == 'Linux':
+        try:
+            font = ImageFont.truetype(font=linux_font, size=font_size_linux, encoding='unic')
+        except OSError:
+            print("cannot locate Linux font:", windows_font)
+            exit()
+        except IOError:
+            print("cannot open Linux font:", windows_font)
+            exit()
+    else:
+        print("this programm can run only on Windows or Linux")
+        exit()
+    return font
+
+
 def main(vcard_file):
     list_of_cards = load_vcards(vcard_file)
     if list_of_cards:
@@ -131,12 +162,13 @@ def main(vcard_file):
         shutil.rmtree(dirname, ignore_errors=True)  # remove old directory and files
         try:
             os.makedirs(dirname)  # create new directory
-        except:
+        except OSError:
             print("access error: can't create directory:", dirname)
         else:
+            font = load_truetype_font()
             os.chdir(dirname)
             for card in list_of_cards:
-                create_thumbnail(card)
+                create_thumbnail(card, font)
 
 
 if __name__ == '__main__':
@@ -145,6 +177,6 @@ if __name__ == '__main__':
         if os.path.exists(vfile):
             main(vfile)
         else:
-            print("no such file:", vfile)
+            print("no such vcf file:", vfile)
     else:
         print('no vcard file given')
