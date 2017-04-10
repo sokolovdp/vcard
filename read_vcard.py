@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.1.0 April, 10 2017
+# Version 2.1.1 April, 10 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -18,13 +18,16 @@ import re
 import shutil
 import base64
 import platform
+import chardet
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 
 stand_pars = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
-X = 154
-Y = 20
+X_PHOTO = 154
+Y_PHOTO = 20
+X_NO_PHOTO = 50
+Y_NO_PHOTO = 40
 OFF = 20
 small_size = (146, 196)
 thumb_size = (350, 200)
@@ -37,8 +40,13 @@ linux_font = '/usr/share/fonts/truetype/freemono/FreeMono.ttf'
 font_size_linux = 10
 
 
+def get_encoding(fname):
+    raw_data = open(fname, "rb").read()
+    result = chardet.detect(raw_data)
+    return result['encoding']
+
 def load_vcards(filename):  # parse VCF file into list of dicts with vcard params
-    with open(filename, encoding="utf8") as f:
+    with open(filename, encoding=get_encoding(filename)) as f:
         data = f.read()
     vcard_format = "BEGIN:VCARD(?P<card>.*?)END:VCARD\n"
     p_vcard = re.compile(vcard_format, re.DOTALL)
@@ -105,11 +113,12 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
 def create_thumbnail(card_info, font_truetype):
     background = Image.new('RGBA', thumb_size, background_color)
     draw = ImageDraw.Draw(background)
-    y = Y
-    x = X
-    if 'PHOTO' not in card_info.keys():
-        x = X - 100
-        y = Y + 20
+    if 'PHOTO' in card_info.keys():
+        x = X_PHOTO
+        y = Y_PHOTO
+    else:
+        x = X_NO_PHOTO
+        y = Y_NO_PHOTO
     for param in list(card_info.keys()):
         if param == 'PHOTO':
             smaller_img = card_info['PHOTO'].resize(small_size)
