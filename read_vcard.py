@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.1.1 April, 10 2017
+# Version 2.1.2 April, 11 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -36,8 +36,8 @@ text_color = (0, 0, 0)
 background_color = (255, 255, 255, 255)
 windows_font = 'ariali.ttf'
 font_size_windows = 12
-linux_font = '/usr/share/fonts/truetype/freemono/FreeMono.ttf'
-font_size_linux = 10
+linux_font = '/usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-RI.ttf'
+font_size_linux = 12
 
 
 def get_encoding(fname):
@@ -153,10 +153,10 @@ def load_truetype_font():  # check which OS is running and install proper truety
         try:
             font = ImageFont.truetype(font=linux_font, size=font_size_linux, encoding='unic')
         except OSError:
-            print("cannot locate Linux font:", windows_font)
+            print("cannot locate Linux font:", linux_font)
             exit()
         except IOError:
-            print("cannot open Linux font:", windows_font)
+            print("cannot open Linux font:", linux_font)
             exit()
     else:
         print("this programm can run only on Windows or Linux")
