@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.1.2 April, 11 2017
+# Version 2.3 April, 13 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -19,6 +19,7 @@ import shutil
 import base64
 import platform
 import chardet
+import random
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
@@ -45,25 +46,43 @@ def get_encoding(fname):
     result = chardet.detect(raw_data)
     return result['encoding']
 
+
 def load_vcards(filename):  # parse VCF file into list of dicts with vcard params
     with open(filename, encoding=get_encoding(filename)) as f:
         data = f.read()
     vcard_format = "BEGIN:VCARD(?P<card>.*?)END:VCARD\n"
     p_vcard = re.compile(vcard_format, re.DOTALL)
-    photo_format = "PHOTO;(?P<photo>.*?)/9k=\n"
+
+    photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):(?P<base64>[A-Za-z0-9+/=]+?\n)"
     p_photo = re.compile(photo_format, re.DOTALL)
+
+    base64_format = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"
+    b64_value = re.compile(base64_format, re.MULTILINE)
+
     param_format = "(?P<param>.*?):(?P<value>.*?)\n"
     p_param = re.compile(param_format)
+
     cards_list = list()
 
-    for match1 in p_vcard.finditer(data):
+    for match_vcard in p_vcard.finditer(data):
         vcard_params = dict()
-        vcard_text = match1.group('card')
-        match2 = re.search(p_photo, vcard_text)
-        if match2:  # there is a photo image in the vcard
-            span = match2.span()
-            photo_value = match2.group('photo').replace('\n', '')
-            photo_code = '%s%s' % (photo_value.split(':')[1], '/9k=')
+        vcard_text = match_vcard.group('card')
+        match_photo = re.search(p_photo, vcard_text)
+        if match_photo:  # there is a photo image in the vcard
+            span = match_photo.span()
+            start_photo = span[0]
+            end_photo = span[1]
+            # photo_pars = match_photo.group('pars')
+            photo_code = match_photo.group('base64')
+            # print(photo_pars, photo_code)  # debug
+            # check if the next text is still base64 code
+            off = 0
+            for match_base64 in b64_value.finditer(vcard_text[end_photo:]):
+                # print(match_base64.group('base64'))  # debug
+                photo_code += match_base64.group('base64')
+                off = match_base64.span()[1]
+            end_photo += off
+            # print (start_photo, end_photo, vcard_text[end_photo:]) # debug
             try:
                 image_bytes = base64.b64decode(photo_code)
             except:
@@ -71,12 +90,12 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
             else:
                 try:
                     image = Image.open(io.BytesIO(image_bytes))
-                except:
+                except TypeError:
                     print('error in image format, image ignored')
                 else:
                     vcard_params["PHOTO"] = image
-            vcard_text = vcard_text[:span[0]]
-            tail = vcard_text[span[1]:]
+            vcard_text = vcard_text[:start_photo]
+            tail = vcard_text[end_photo:]
             if len(tail):
                 vcard_text += tail
         n_given = False
@@ -104,7 +123,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
                 del vcard_params['N']
             cards_list.append(vcard_params)
         else:
-            print("no valid parameters in data, VCARD ignored")
+            print("no valid parameters in data, vcard ignored")
     print("loaded vcards: {} from file: {}".format(len(cards_list), filename))
     #  exit()  # debug
     return cards_list
@@ -126,15 +145,14 @@ def create_thumbnail(card_info, font_truetype):
         else:
             draw.text((x, y), '%s: %s' % (param.lower(), card_info[param]), text_color, font=font_truetype)
             y += OFF
-    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_')).replace('\n', ' ')
+    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_'))
+    if os.path.isfile(thumb_file+'.png'):
+        thumb_file += '_{}'.format(random.randint(0, 999))
     thumb_file += '.png'
-    if os.path.isfile(thumb_file):
-        print('duplicated vcard and thumb file names: {} VCARD ignored'.format(thumb_file))
-    else:
-        try:
-            background.save(thumb_file)
-        except IOError:
-            print("IO error during writing thumb file:", thumb_file)
+    try:
+        background.save(thumb_file)
+    except IOError:
+        print("i/o error during writing thumb file:", thumb_file)
 
 
 def load_truetype_font():  # check which OS is running and install proper truetype font
@@ -144,22 +162,22 @@ def load_truetype_font():  # check which OS is running and install proper truety
         try:
             font = ImageFont.truetype(font=windows_font, size=font_size_windows, encoding='unic')
         except OSError:
-            print("cannot locate Windows font:", windows_font)
+            print("cannot locate windows font:", windows_font)
             exit()
         except IOError:
-            print("cannot open Windows font:", windows_font)
+            print("cannot open windows font:", windows_font)
             exit()
     elif os_name == 'Linux':
         try:
             font = ImageFont.truetype(font=linux_font, size=font_size_linux, encoding='unic')
         except OSError:
-            print("cannot locate Linux font:", linux_font)
+            print("cannot locate linux font:", linux_font)
             exit()
         except IOError:
-            print("cannot open Linux font:", linux_font)
+            print("cannot open linux font:", linux_font)
             exit()
     else:
-        print("this programm can run only on Windows or Linux")
+        print("this program can run only on windows or linux")
         exit()
     return font
 
