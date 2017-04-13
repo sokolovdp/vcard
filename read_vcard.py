@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.3 April, 13 2017
+# Version 2.4 April, 13 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -50,16 +50,16 @@ def get_encoding(fname):
 def load_vcards(filename):  # parse VCF file into list of dicts with vcard params
     with open(filename, encoding=get_encoding(filename)) as f:
         data = f.read()
-    vcard_format = "BEGIN:VCARD(?P<card>.*?)END:VCARD\n"
+    vcard_format = "BEGIN:VCARD(?P<card>.*?)END:VCARD\n"  # pattern of VCARD
     p_vcard = re.compile(vcard_format, re.DOTALL)
 
-    photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):(?P<base64>[A-Za-z0-9+/=]+?\n)"
+    photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):(?P<base64>[A-Za-z0-9+/=]+?\n)"  # pattern of PHOTO Param
     p_photo = re.compile(photo_format, re.DOTALL)
 
-    base64_format = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"
+    base64_format = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of BASE64 code
     b64_value = re.compile(base64_format, re.MULTILINE)
 
-    param_format = "(?P<param>.*?):(?P<value>.*?)\n"
+    param_format = "(?P<param>.*?):(?P<value>.*?)\n"  # pattern of any other PARAM
     p_param = re.compile(param_format)
 
     cards_list = list()
@@ -72,17 +72,13 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
             span = match_photo.span()
             start_photo = span[0]
             end_photo = span[1]
-            # photo_pars = match_photo.group('pars')
             photo_code = match_photo.group('base64')
-            # print(photo_pars, photo_code)  # debug
             # check if the next text is still base64 code
-            off = 0
+            off = 0  # offset from beginning of the photo field
             for match_base64 in b64_value.finditer(vcard_text[end_photo:]):
-                # print(match_base64.group('base64'))  # debug
                 photo_code += match_base64.group('base64')
                 off = match_base64.span()[1]
-            end_photo += off
-            # print (start_photo, end_photo, vcard_text[end_photo:]) # debug
+            end_photo += off  # offset from begin photo field
             try:
                 image_bytes = base64.b64decode(photo_code)
             except:
@@ -91,13 +87,13 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
                 try:
                     image = Image.open(io.BytesIO(image_bytes))
                 except TypeError:
-                    print('error in image format, image ignored')
+                    print('error in image data, image ignored')
                 else:
                     vcard_params["PHOTO"] = image
-            vcard_text = vcard_text[:start_photo]
-            tail = vcard_text[end_photo:]
-            if len(tail):
-                vcard_text += tail
+            vcard_head = vcard_text[:start_photo]
+            vcard_tail = vcard_text[end_photo:]
+            if len(vcard_tail):
+                vcard_text = ''.join([vcard_head, vcard_tail])
         n_given = False
         fn_given = False
         for match3 in p_param.finditer(vcard_text):  # parse other parameters
@@ -105,7 +101,6 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
             values = match3.group('value').split(';')
             param = params[0]
             value = values[0]
-            # print(params, params[0], values, values[0])    # debug
             if param == 'N':
                 n_given = True
             if param == 'FN':
@@ -125,7 +120,6 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
         else:
             print("no valid parameters in data, vcard ignored")
     print("loaded vcards: {} from file: {}".format(len(cards_list), filename))
-    #  exit()  # debug
     return cards_list
 
 
@@ -146,9 +140,9 @@ def create_thumbnail(card_info, font_truetype):
             draw.text((x, y), '%s: %s' % (param.lower(), card_info[param]), text_color, font=font_truetype)
             y += OFF
     thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_'))
-    if os.path.isfile(thumb_file+'.png'):
-        thumb_file += '_{}'.format(random.randint(0, 999))
-    thumb_file += '.png'
+    if os.path.isfile(thumb_file + '.png'):
+        thumb_file = '{}_{}'.format(thumb_file, random.randint(0, 999))
+    thumb_file = '{}.png'.format(thumb_file)
     try:
         background.save(thumb_file)
     except IOError:
