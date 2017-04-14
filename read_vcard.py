@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.4 April, 13 2017
+# Version 2.5 April, 14 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -50,10 +50,10 @@ def get_encoding(fname):
 def load_vcards(filename):  # parse VCF file into list of dicts with vcard params
     with open(filename, encoding=get_encoding(filename)) as f:
         data = f.read()
-    vcard_format = "BEGIN:VCARD(?P<card>.*?)END:VCARD\n"  # pattern of VCARD
+    vcard_format = "BEGIN:VCARD(?P<card>.*?)END:VCARD"  # pattern of VCARD
     p_vcard = re.compile(vcard_format, re.DOTALL)
 
-    photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):(?P<base64>[A-Za-z0-9+/=]+?\n)"  # pattern of PHOTO Param
+    photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of PHOTO Param
     p_photo = re.compile(photo_format, re.DOTALL)
 
     base64_format = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of BASE64 code
@@ -63,7 +63,6 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
     p_param = re.compile(param_format)
 
     cards_list = list()
-
     for match_vcard in p_vcard.finditer(data):
         vcard_params = dict()
         vcard_text = match_vcard.group('card')
@@ -109,7 +108,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
                 vcard_params[param] = value
         if vcard_params:
             if (not n_given) and (not fn_given):
-                print("no name parameters (N, FN) in data, VCARD ignored")
+                print("no name parameters (N or FN) in data, vcard ignored")
                 continue
             if n_given and fn_given:  # there must only FN parameter in vcard data
                 del vcard_params['N']
@@ -179,7 +178,7 @@ def load_truetype_font():  # check which OS is running and install proper truety
 def main(vcard_file):
     list_of_cards = load_vcards(vcard_file)
     if list_of_cards:
-        dirname = vcard_file.lower().split('.')[0] + ".thumbs"
+        dirname = vcard_file.split('.')[0] + ".thumbs"
         shutil.rmtree(dirname, ignore_errors=True)  # remove old directory and files
         try:
             os.makedirs(dirname)  # create new directory
