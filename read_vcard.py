@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.5 April, 14 2017
+# Version 2.6 April 15, 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -40,6 +40,19 @@ font_size_windows = 12
 linux_font = '/usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-RI.ttf'
 font_size_linux = 12
 
+# patterns to parse the vcard file
+vcard_format = "(?i)BEGIN:VCARD(?P<card>.*?)END:VCARD"  # pattern of VCARD, Case-insensitive
+p_vcard = re.compile(vcard_format, re.DOTALL)
+
+photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of PHOTO Param
+p_photo = re.compile(photo_format, re.DOTALL)
+
+base64_format = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of BASE64 code
+b64_value = re.compile(base64_format, re.MULTILINE)
+
+param_format = "(?P<param>.*?):(?P<value>.*?)\n"  # pattern of any other PARAM
+p_param = re.compile(param_format)
+
 
 def get_encoding(fname):
     raw_data = open(fname, "rb").read()
@@ -50,18 +63,6 @@ def get_encoding(fname):
 def load_vcards(filename):  # parse VCF file into list of dicts with vcard params
     with open(filename, encoding=get_encoding(filename)) as f:
         data = f.read()
-    vcard_format = "BEGIN:VCARD(?P<card>.*?)END:VCARD"  # pattern of VCARD
-    p_vcard = re.compile(vcard_format, re.DOTALL)
-
-    photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of PHOTO Param
-    p_photo = re.compile(photo_format, re.DOTALL)
-
-    base64_format = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of BASE64 code
-    b64_value = re.compile(base64_format, re.MULTILINE)
-
-    param_format = "(?P<param>.*?):(?P<value>.*?)\n"  # pattern of any other PARAM
-    p_param = re.compile(param_format)
-
     cards_list = list()
     for match_vcard in p_vcard.finditer(data):
         vcard_params = dict()
@@ -96,7 +97,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
         n_given = False
         fn_given = False
         for match3 in p_param.finditer(vcard_text):  # parse other parameters
-            params = match3.group('param').split(';')
+            params = match3.group('param').upper().split(';')
             values = match3.group('value').split(';')
             param = params[0]
             value = values[0]
