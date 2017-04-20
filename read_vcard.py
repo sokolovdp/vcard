@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Version 2.7 April 17, 2017
+# Version 2.8 April 20, 2017
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -44,7 +44,7 @@ font_size_linux = 12
 vcard_format = "(?i)BEGIN:VCARD(?P<card>.*?)END:VCARD"  # pattern of VCARD, Case-insensitive
 p_vcard = re.compile(vcard_format, re.DOTALL)
 
-photo_format = "PHOTO;(?P<pars>[A-Z0-9;=]+?):[\s]*?(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of PHOTO Param
+photo_format = "PHOTO;(?P<pars>[A-Za-z0-9;=]+?):[\s]*?(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of PHOTO Param
 p_photo = re.compile(photo_format, re.DOTALL)
 
 base64_format = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of BASE64 code
@@ -96,9 +96,9 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
                 vcard_text = ''.join([vcard_head, vcard_tail])
         n_given = False
         fn_given = False
-        for match3 in p_param.finditer(vcard_text):  # parse other parameters
-            params = match3.group('param').upper().split(';')
-            values = match3.group('value').split(';')
+        for match_param in p_param.finditer(vcard_text):  # parse other parameters
+            params = match_param.group('param').upper().split(';')
+            values = match_param.group('value').split(';')
             param = params[0]
             value = values[0]
             if param == 'N':
