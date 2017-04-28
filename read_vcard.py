@@ -70,7 +70,6 @@ current_thumb_parameters = available_thumb_sizes['350x200']  # default value
 
 
 class Display:
-
     def __init__(self, window_mode):
         self._stdout = False
         if not window_mode:
@@ -94,7 +93,7 @@ class Display:
         return not self._stdout
 
 
-def get_encoding(fname):   # detect file encoding
+def get_encoding(fname):  # detect file encoding
     raw_data = open(fname, "rb").read()
     result = chardet.detect(raw_data)
     return result['encoding']
@@ -217,7 +216,7 @@ def main(display, vcard_file, thumbs_dir, font):
             os.chdir(thumbs_dir)
             errors = 0
             for card in list_of_cards:
-                if create_thumbnail(display, card, font):   # returns True if there is an error
+                if create_thumbnail(display, card, font):  # returns True if there is an error
                     errors += 1
             display.write("created directory: {} with {} thumbs files".format(thumbs_dir, len(list_of_cards) - errors))
     if display.window():
@@ -236,14 +235,14 @@ def load_truetype_font(font_file):  # check which OS is running and install prop
         temp_file = current_thumb_parameters['windows_font']
     else:
         print("this program can run only on windows or linux")
-        exit()
+        exit(1)
     if not font_file:  # font file is not given, use standard fonts
         font_file = temp_file
     try:
         font = ImageFont.truetype(font=font_file, size=font_size, encoding='unic')
     except IOError:
         print("cannot open font file: {}".format(font_file))
-        exit()
+        exit(2)
     else:
         return font
 
@@ -283,7 +282,7 @@ if __name__ == '__main__':
         out_dir = make_dir_name(args.file.name)
     if args.size not in available_thumb_sizes.keys():
         print('invalid size of thumbs, available are: {}'.format(list(available_thumb_sizes.keys())))
-        exit()
+        exit(3)
     else:
         current_thumb_parameters = available_thumb_sizes[args.size]
 
