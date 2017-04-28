@@ -1,22 +1,18 @@
 # vcard_read
 
-usage: read_vcard.py [-h] [-s SIZE] [-f FONT] [-t DIR] [-w] file
+usage: read_vcard.py [-h] [-s SIZE] [-f FONT] [-d DIR] [-w] file
 
 This program create .png thumbs of vcards from vcf file
 
 positional arguments:
-  file                  vcf file with vcard data
+  file        .vcf file with vcard data
 
 optional arguments:
-  -h, --help                 show this help message and exit
-  -s SIZE, --thumb_size SIZE thumbs icons size, valid sizes are: 350x200 (default)
-                             and 700x400
-  -f FONT, --font FONT       path to directory with font to be used for thumbs
-  -t DIR, --todir DIR        directory to write thumb files, default:
-                             filename.thumbs
-  -w, --window               show program messages in window, default: messages
-                             printed to standart output
-
+  -h, --help  show this help message and exit
+  -s SIZE     thumbs icons size, valid sizes are: 350x200 (default) and 700x400
+  -f FONT     full path of the font file to be used for thumbs
+  -d DIR      directory with thumb files, default: <file>.thumbs
+  -w          show program messages in window, default: text in the standard output
 
 To run program vcard_read.py on Ubuntu:
 

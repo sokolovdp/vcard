@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-version = 'Ver 3.0b April 22, 2017'
+# version = 'Ver 3.1b April 28, 2017'
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -26,10 +26,14 @@ from PIL import ImageFont
 from PIL import ImageDraw
 import tkinter as tk
 
-# Initialize  global variables
-stand_pars = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
+# Initialize global variables
+version = 'Ver 3.1b April 28, 2017'
 
-small_size = {
+standard_parameters = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
+
+tk_window_geometry = '620x100+300+200'
+
+small_size = {  # parameters of small thumb
     'thumb_size': (350, 200),
     'pict_size': (146, 196),
     'X_PHOTO': 154,
@@ -39,10 +43,13 @@ small_size = {
     'OFF': 20,
     'pic_offset': (2, 2),
     'font_size_windows': 12,
-    'font_size_linux': 12
+    'font_size_linux': 12,
+    'windows_font': 'ariali.ttf',
+    'linux_font': '/usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-RI.ttf',
+    'background': (255, 255, 255, 255),  # white
+    'text_color': (0, 0, 0)  # black
 }
-
-big_size = {
+big_size = {  # parameters of big thumb
     'thumb_size': (700, 400),
     'pict_size': (292, 392),
     'X_PHOTO': 308,
@@ -52,28 +59,18 @@ big_size = {
     'OFF': 40,
     'pic_offset': (4, 4),
     'font_size_windows': 24,
-    'font_size_linux': 24
+    'font_size_linux': 24,
+    'windows_font': 'ariali.ttf',
+    'linux_font': '/usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-RI.ttf',
+    'background': (255, 255, 255, 255),  # white
+    'text_color': (0, 0, 0)  # black
 }
-
 available_thumb_sizes = {'350x200': small_size, '700x400': big_size}
-thumb_pars = available_thumb_sizes['350x200']
-
-windows_font = 'ariali.ttf'
-linux_font = '/usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-RI.ttf'
-font_truetype = ''
-
-vcard_file = ''
-encoding = 'UTF-8'
-thumbs_dir = 'temp.thumbs'
-
-background_color = (255, 255, 255, 255)  # white
-text_color = (0, 0, 0)  # black
-
-# time_out = 30000  # 30 secs
-tk_window_geometry = '620x100+300+200'
+current_thumb_parameters = available_thumb_sizes['350x200']  # default value
 
 
 class Display:
+
     def __init__(self, window_mode):
         self._stdout = False
         if not window_mode:
@@ -81,31 +78,30 @@ class Display:
             return
         # create window for program messages
         self.mainWindow = tk.Tk()
-        # self.mainWindow.after(time_out, lambda: self.mainWindow.destroy())
         self.mainWindow.title("   VCF file reader  {}".format(version))
         self.mainWindow.geometry(tk_window_geometry)
         self.mainWindow['padx'] = 8
-        self.text_box = tk.Text(self.mainWindow, state=tk.NORMAL)  # DISABLED)
+        self.text_box = tk.Text(self.mainWindow, state=tk.NORMAL)
         self.text_box.pack()
 
     def write(self, text):
         if self._stdout:
             print(text)
             return
-        # text_box.config(state=tk.NORMAL)
         self.text_box.insert("end", "{}\n".format(text))
-        # text_box.see("end")
-        # text_box.config(state=tk.DISABLED)
+
+    def window(self):
+        return not self._stdout
 
 
-def get_encoding(fname):
+def get_encoding(fname):   # detect file encoding
     raw_data = open(fname, "rb").read()
     result = chardet.detect(raw_data)
     return result['encoding']
 
 
-def load_vcards(filename):  # parse VCF file into list of dicts with vcard params
-    # patterns to parse the vcard file
+def load_vcf_file(display, filename):  # parse VCF file into list of dicts with vcard params
+    # patterns to parse the .vcf file
     vcard_format = "(?i)BEGIN:VCARD(?P<card>.*?)END:VCARD"  # pattern of VCARD, Case-insensitive
     p_vcard = re.compile(vcard_format, re.DOTALL)
 
@@ -126,9 +122,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
         vcard_text = match_vcard.group('card')
         match_photo = re.search(p_photo, vcard_text)
         if match_photo:  # there is a photo image in the vcard
-            span = match_photo.span()
-            start_photo = span[0]
-            end_photo = span[1]
+            start_photo, end_photo = match_photo.span()
             photo_code = match_photo.group('base64')
             # check if the next text is still base64 code
             off = 0  # offset from beginning of the photo field
@@ -138,7 +132,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
             end_photo += off  # offset from begin photo field
             try:
                 image_bytes = base64.b64decode(photo_code)
-            except:
+            except Exception:
                 display.write('error in base64 encoding, image data ignored')
             else:
                 try:
@@ -162,7 +156,7 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
                 n_given = True
             if param == 'FN':
                 fn_given = True
-            if (param in stand_pars) and (param not in vcard_params.keys()):
+            if (param in standard_parameters) and (param not in vcard_params.keys()):
                 vcard_params[param] = value
         if vcard_params:
             if (not n_given) and (not fn_given):
@@ -180,113 +174,117 @@ def load_vcards(filename):  # parse VCF file into list of dicts with vcard param
     return cards_list
 
 
-def create_thumbnail(card_info):
-    background = Image.new('RGBA', thumb_pars['thumb_size'], background_color)
+def create_thumbnail(display, card_info, font):
+    background = Image.new('RGBA', current_thumb_parameters['thumb_size'], current_thumb_parameters['background'])
     draw = ImageDraw.Draw(background)
     if 'PHOTO' in card_info.keys():
-        x = thumb_pars['X_PHOTO']
-        y = thumb_pars['Y_PHOTO']
+        x = current_thumb_parameters['X_PHOTO']
+        y = current_thumb_parameters['Y_PHOTO']
     else:
-        x = thumb_pars['X_NO_PHOTO']
-        y = thumb_pars['Y_NO_PHOTO']
+        x = current_thumb_parameters['X_NO_PHOTO']
+        y = current_thumb_parameters['Y_NO_PHOTO']
     for param in list(card_info.keys()):
         if param == 'PHOTO':
-            smaller_img = card_info['PHOTO'].resize(thumb_pars['pict_size'])
-            background.paste(smaller_img, thumb_pars['pic_offset'])
+            smaller_img = card_info['PHOTO'].resize(current_thumb_parameters['pict_size'])
+            background.paste(smaller_img, current_thumb_parameters['pic_offset'])
         else:
-            draw.text((x, y), '{}: {}'.format(param.lower(), card_info[param]), text_color, font=font_truetype)
-            y += thumb_pars['OFF']
-    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_'))
+            draw.text((x, y), '{}: {}'.format(param.lower(), card_info[param]),
+                      current_thumb_parameters['text_color'], font=font)
+            y += current_thumb_parameters['OFF']
+    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_'))  # clean filename from forbidden chars
     if os.path.isfile('{}.png'.format(thumb_file)):
         thumb_file = '{}_{}'.format(thumb_file, random.randint(0, 999))
     thumb_file = '{}.png'.format(thumb_file)
     try:
         background.save(thumb_file)
     except IOError:
-        display.write("IO error during writing thumb file: {}".format(thumb_file))
+        display.write("i/o error during writing thumb file: {}".format(thumb_file))
+        error = True
+    else:
+        error = False
+    return error
+
+
+def main(display, vcard_file, thumbs_dir, font):
+    list_of_cards = load_vcf_file(display, vcard_file)
+    if list_of_cards:
+        shutil.rmtree(thumbs_dir, ignore_errors=True)  # remove old thumb directory and all files in it
+        try:
+            os.makedirs(thumbs_dir)  # create thumbs directory
+        except OSError:
+            display.write("access error: can't create directory: {}".format(thumbs_dir))
+        else:
+            os.chdir(thumbs_dir)
+            errors = 0
+            for card in list_of_cards:
+                if create_thumbnail(display, card, font):   # returns True if there is an error
+                    errors += 1
+            display.write("created directory: {} with {} thumbs files".format(thumbs_dir, len(list_of_cards) - errors))
+    if display.window():
+        display.mainWindow.mainloop()
 
 
 def load_truetype_font(font_file):  # check which OS is running and install proper truetype font
     # initialize local vars
     os_name = platform.system()
-    size = 'font_size_linux'
-    temp_file = linux_font
-    if os_name == "Windows":
-        size = 'font_size_windows'
-        temp_file = windows_font
-    elif os_name == 'Linux':
+    font_size = current_thumb_parameters['font_size_linux']
+    temp_file = current_thumb_parameters['linux_font']
+    if os_name == 'Linux':
         pass
+    elif os_name == "Windows":
+        font_size = current_thumb_parameters['font_size_windows']
+        temp_file = current_thumb_parameters['windows_font']
     else:
-        display.write("this programm can run only on Windows or Linux")
+        print("this program can run only on windows or linux")
         exit()
-    font = None
-    if not font_file:
-        try:
-            font = ImageFont.truetype(font=temp_file, size=thumb_pars[size], encoding='unic')
-        except IOError:
-            display.write("cannot open font:".format(temp_file))
-            exit()
-    else:  # font file is given
-        try:
-            font = ImageFont.truetype(font=font_file, size=thumb_pars[size], encoding='unic')
-        except IOError:
-            display.write("cannot open font: {}".format(font_file))
-            exit()
-    return font
+    if not font_file:  # font file is not given, use standard fonts
+        font_file = temp_file
+    try:
+        font = ImageFont.truetype(font=font_file, size=font_size, encoding='unic')
+    except IOError:
+        print("cannot open font file: {}".format(font_file))
+        exit()
+    else:
+        return font
 
 
-def make_dir_name(filename):
-    temp = os.path.split(filename)[1]
-    if '.' in temp:  # check if there is a file extension
-        temp = filename.split('.')[0]
-    return "{}.thumbs".format(temp)
+def make_dir_name(dirname):
+    try:
+        temp = os.path.split(dirname)[1]
+    except OSError:
+        print("invalid directory name: {}".format(dirname))
+    else:
+        if not temp:
+            temp = 'temp'
+        return "{}.thumbs".format(temp)
 
-
-def main(window_mode):
-    list_of_cards = load_vcards(vcard_file)
-    if list_of_cards:
-        shutil.rmtree(thumbs_dir, ignore_errors=True)  # remove old directory and files
-        try:
-            os.makedirs(thumbs_dir)  # create new directory
-        except OSError:
-            display.write("access error: can't create directory: {}".format(thumbs_dir))
-        else:
-            os.chdir(thumbs_dir)
-            for card in list_of_cards:
-                create_thumbnail(card)
-            display.write("created directory: {} with {} thumbs".format(thumbs_dir, len(list_of_cards)))
-    if window_mode:
-        display.mainWindow.mainloop()
 
 if __name__ == '__main__':
 
     ap = argparse.ArgumentParser(description='This program create .png thumbs of vcards from vcf file')
-    ap.add_argument("-s", "--thumb_size", dest="size", action="store", default='350x200',
+    ap.add_argument("-s", dest="size", action="store", default='350x200',
                     help="thumbs icons size, valid sizes are: 350x200 (default) and 700x400")
-    ap.add_argument("-f", "--font", dest="font", action="store", type=argparse.FileType('rb'),
-                    help="path to directory with font to be used for thumbs")
-    ap.add_argument("-t", "--todir", dest="dir", action="store",
-                    help="directory to write thumb files, default: filename.thumbs")
-    ap.add_argument("-w", "--window", dest="win", action="store_true", default=False,
-                    help="show program messages in window, default: messages printed to standart output")
-    ap.add_argument("file", type=argparse.FileType('rb'), help="vcf file with vcard data")
+    ap.add_argument("-f", dest="font", action="store", type=argparse.FileType('rb'),
+                    help="full path of the font file to be used for thumbs")
+    ap.add_argument("-d", dest="dir", action="store",
+                    help="directory with thumb files, default: <file>.thumbs")
+    ap.add_argument("-w", dest="win", action="store_true", default=False,
+                    help="show program messages in window, default: text in the standard output")
+    ap.add_argument("file", type=argparse.FileType('rb'), help=".vcf file with vcards data")
 
     args = ap.parse_args(sys.argv[1:])
-    vcard_file = args.file.name
-    encoding = get_encoding(vcard_file)
     if args.font:
-        font_truetype = load_truetype_font(args.font)
+        user_font = load_truetype_font(args.font)
     else:
-        font_truetype = load_truetype_font(None)
+        user_font = load_truetype_font(None)
     if args.dir:
-        thumbs_dir = args.dir
+        out_dir = make_dir_name(args.dir)
     else:
-        thumbs_dir = make_dir_name(vcard_file)
+        out_dir = make_dir_name(args.file.name)
     if args.size not in available_thumb_sizes.keys():
         print('invalid size of thumbs, available are: {}'.format(list(available_thumb_sizes.keys())))
         exit()
     else:
-        thumb_pars = available_thumb_sizes[args.size]
+        current_thumb_parameters = available_thumb_sizes[args.size]
 
-    display = Display(args.win)
-    main(args.win)
+    main(Display(args.win), args.file.name, out_dir, user_font)
