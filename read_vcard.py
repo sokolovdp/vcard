@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# version = 'Ver 3.1b April 28, 2017'
+# version = 'Ver 3.2b April 30, 2017'
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -27,7 +27,7 @@ from PIL import ImageDraw
 import tkinter as tk
 
 # Initialize global variables
-version = 'Ver 3.1b April 28, 2017'
+version = 'Ver 3.2b April 30, 2017'
 
 standard_parameters = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
 
@@ -255,7 +255,7 @@ def make_dir_name(dirname):
     else:
         if not temp:
             temp = 'temp'
-        return "{}.thumbs".format(temp)
+        return "{}_thumbs".format(temp.replace('.vcf', ''))
 
 
 if __name__ == '__main__':
