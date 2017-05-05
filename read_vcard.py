@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# version = 'Ver 3.2b April 30, 2017'
+# version = 'ver 4.0b  May 5, 2017'
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -27,7 +27,7 @@ from PIL import ImageDraw
 import tkinter as tk
 
 # Initialize global variables
-version = 'Ver 3.2b April 30, 2017'
+version = 'ver 4.0b  May 5, 2017'
 
 standard_parameters = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
 
@@ -93,8 +93,13 @@ class Display:
         return not self._stdout
 
 
+def form_file_path(dirname, filename):
+    return "{}{}{}".format(dirname, '/', filename)
+
+
 def get_encoding(fname):  # detect file encoding
-    raw_data = open(fname, "rb").read()
+    with open(fname, "rb") as f:
+        raw_data = f.read()
     result = chardet.detect(raw_data)
     return result['encoding']
 
@@ -169,11 +174,10 @@ def load_vcf_file(display, filename):  # parse VCF file into list of dicts with 
             cards_list.append(vcard_params)
         else:
             print("no valid parameters in data, vcard ignored")
-    display.write("loaded {} vcards, from file: {}".format(len(cards_list), filename))
     return cards_list
 
 
-def create_thumbnail(display, card_info, font):
+def create_thumbnail(display, card_info, font, image_name=None):
     background = Image.new('RGBA', current_thumb_parameters['thumb_size'], current_thumb_parameters['background'])
     draw = ImageDraw.Draw(background)
     if 'PHOTO' in card_info.keys():
@@ -190,10 +194,14 @@ def create_thumbnail(display, card_info, font):
             draw.text((x, y), '{}: {}'.format(param.lower(), card_info[param]),
                       current_thumb_parameters['text_color'], font=font)
             y += current_thumb_parameters['OFF']
-    thumb_file = re.sub(r'[\\/*?:"<>|]', '', card_info['FN'].replace(' ', '_'))  # clean filename from forbidden chars
-    if os.path.isfile('{}.png'.format(thumb_file)):
-        thumb_file = '{}_{}'.format(thumb_file, random.randint(0, 999))
-    thumb_file = '{}.png'.format(thumb_file)
+    if image_name is None:
+        thumb_file = re.sub(r'[\\/*?:"<>|]', '',
+                            card_info['FN'].replace(' ', '_'))  # clean filename from forbidden chars
+        if os.path.isfile('{}.png'.format(thumb_file)):
+            thumb_file = '{}_{}'.format(thumb_file, random.randint(0, 999))
+        thumb_file = '{}.png'.format(thumb_file)
+    else:
+        thumb_file = image_name
     try:
         background.save(thumb_file)
     except IOError:
@@ -204,21 +212,52 @@ def create_thumbnail(display, card_info, font):
     return error
 
 
-def main(display, vcard_file, thumbs_dir, font):
-    list_of_cards = load_vcf_file(display, vcard_file)
-    if list_of_cards:
-        shutil.rmtree(thumbs_dir, ignore_errors=True)  # remove old thumb directory and all files in it
+def split_vcf_file(display, filename, dirname):  # split one VCF file into many single vcard files
+    vcard_format = "(?i)BEGIN:VCARD(?P<card>.*?)END:VCARD"
+    pattern_vcard = re.compile(vcard_format, re.DOTALL)
+    with open(filename, encoding=get_encoding(filename)) as f:
+        data = f.read()
+    n_vcards = 0
+    for n, match_vcard in enumerate(pattern_vcard.finditer(data)):
+        single_vcf_file = form_file_path(dirname, "{:0>4}.vcf".format(n + 1))
+        vcard_text = "{}\n{}{}\n".format("BEGIN:VCARD", match_vcard.group('card').lstrip(), "END:VCARD")
         try:
-            os.makedirs(thumbs_dir)  # create thumbs directory
-        except OSError:
-            display.write("access error: can't create directory: {}".format(thumbs_dir))
+            with open(single_vcf_file, 'w', encoding='utf8') as f:
+                f.write(vcard_text)
+        except IOError:
+            display.write("i/o error during writing single vcf file: {}".format(single_vcf_file))
         else:
+            n_vcards = n + 1
+    return n_vcards
+
+
+def main(display, vcard_file, thumbs_dir, font, multi):
+    if not multi:
+        list_of_cards = load_vcf_file(display, vcard_file)
+        display.write("loaded {} vcards, from file: {}".format(len(list_of_cards), vcard_file))
+        errors = 0
+        if list_of_cards:
             os.chdir(thumbs_dir)
-            errors = 0
             for card in list_of_cards:
                 if create_thumbnail(display, card, font):  # returns True if there is an error
                     errors += 1
-            display.write("created directory: {} with {} thumbs files".format(thumbs_dir, len(list_of_cards) - errors))
+        display.write("created directory: {} with {} thumbs files".format(thumbs_dir, len(list_of_cards) - errors))
+    else:
+        display.write("split .vcf file mode activated, output directory: {}".format(thumbs_dir))
+        nv = split_vcf_file(display, vcard_file, thumbs_dir)
+        display.write("created {} .vcf single vcard files".format(nv))
+        list_of_files = os.listdir(thumbs_dir)
+        os.chdir(thumbs_dir)
+        errors = 0
+        for file in list_of_files:
+            if file.endswith(".vcf"):
+                list_of_cards = load_vcf_file(display, file)
+                if list_of_cards:
+                    png_file = "{}.png".format(file.split(".")[0])
+                    if create_thumbnail(display, list_of_cards[0], font, png_file):
+                        errors += 1
+        display.write("created {} .png thumb files".format(nv - errors))
+
     if display.window():
         display.mainWindow.mainloop()
 
@@ -261,6 +300,8 @@ def make_dir_name(dirname):
 if __name__ == '__main__':
 
     ap = argparse.ArgumentParser(description='This program create .png thumbs of vcards from vcf file')
+    ap.add_argument("-m", dest="multi", action="store_true", default=False,
+                    help="split source vcf file on many single vcard .vcf files, each with .png thumb")
     ap.add_argument("-s", dest="size", action="store", default='350x200',
                     help="thumbs icons size, valid sizes are: 350x200 (default) and 700x400")
     ap.add_argument("-f", dest="font", action="store", type=argparse.FileType('rb'),
@@ -276,14 +317,22 @@ if __name__ == '__main__':
         user_font = load_truetype_font(args.font)
     else:
         user_font = load_truetype_font(None)
+    # get dir name, delete it and all files, then recreate empty dir
     if args.dir:
         out_dir = make_dir_name(args.dir)
     else:
         out_dir = make_dir_name(args.file.name)
+    shutil.rmtree(out_dir, ignore_errors=True)  # remove old thumb directory and all files in it
+    try:
+        os.makedirs(out_dir)  # create thumbs directory
+    except OSError:
+        print("access error: can't create directory: {}".format(out_dir))
+        exit(3)
+
     if args.size not in available_thumb_sizes.keys():
         print('invalid size of thumbs, available are: {}'.format(list(available_thumb_sizes.keys())))
-        exit(3)
+        exit(4)
     else:
         current_thumb_parameters = available_thumb_sizes[args.size]
 
-    main(Display(args.win), args.file.name, out_dir, user_font)
+    main(Display(args.win), args.file.name, out_dir, user_font, args.multi)

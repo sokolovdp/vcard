@@ -1,21 +1,24 @@
 # vcard_read
 
-usage: read_vcard.py [-h] [-s SIZE] [-f FONT] [-d DIR] [-w] file
+usage: read_vcard.py [-h] [-m] [-s SIZE] [-f FONT] [-d DIR] [-w] file
 
 This program create .png thumbs of vcards from vcf file
 
 positional arguments:
-  file        .vcf file with vcard data
+  file        .vcf file with vcards data
 
 optional arguments:
   -h, --help  show this help message and exit
+  -m          split source vcf file on many single vcard .vcf files, each with .png thumb
   -s SIZE     thumbs icons size, valid sizes are: 350x200 (default) and 700x400
   -f FONT     full path of the font file to be used for thumbs
   -d DIR      directory with thumb files, default: <file>.thumbs
-  -w          show program messages in window, default: text in the standard output
+  -w          show program messages in window, default: text in the standard
+              output
 
-To run program vcard_read.py on Ubuntu:
 
+To run vcard_read.py on Ubuntu:
+-------------------------------
 1) make sure that python3 and all needed packages are installed: 
 	io, os, sys, platform, base64, shutil, re, PIL, chardet, random, tkinter(!)
 2) to use tkinter on Ubuntu (if it is not present yet) you  need to install a separate package:
