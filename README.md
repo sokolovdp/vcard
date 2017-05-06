@@ -1,8 +1,10 @@
 # vcard_read
 
-usage: read_vcard.py [-h] [-m] [-a ADD] [-s SIZE] [-f FONT] [-d DIR] [-w] file
-
 This program create .png thumbs of vcards from vcf file
+
+usage:
+
+	read_vcard.py [-h] [-m] [-a ADD] [-s SIZE] [-f FONT] [-d DIR] [-w] file
 
 positional arguments:
 
