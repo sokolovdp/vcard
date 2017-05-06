@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# version = 'ver 4.0b  May 5, 2017'
+# version = 'ver 4.1b  May 6, 2017'
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -27,7 +27,7 @@ from PIL import ImageDraw
 import tkinter as tk
 
 # Initialize global variables
-version = 'ver 4.0b  May 5, 2017'
+version = 'ver 4.1b  May 6, 2017'
 
 standard_parameters = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
 
@@ -302,6 +302,8 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(description='This program create .png thumbs of vcards from vcf file')
     ap.add_argument("-m", dest="multi", action="store_true", default=False,
                     help="split source vcf file on many single vcard .vcf files, each with .png thumb")
+    ap.add_argument("-a", dest="add", action="store",
+                    help="add additional vcard parameter(s) to parse from .vcf file")
     ap.add_argument("-s", dest="size", action="store", default='350x200',
                     help="thumbs icons size, valid sizes are: 350x200 (default) and 700x400")
     ap.add_argument("-f", dest="font", action="store", type=argparse.FileType('rb'),
@@ -313,12 +315,19 @@ if __name__ == '__main__':
     ap.add_argument("file", type=argparse.FileType('rb'), help=".vcf file with vcards data")
 
     args = ap.parse_args(sys.argv[1:])
+
+    if args.add:  # additional parameters to parse from vcard
+        for p in args.add.upper().split():
+            if p not in standard_parameters:
+                standard_parameters.append(p)
+            else:
+                print("additional parameter {} is already included in the parser".format(p))
     if args.font:
         user_font = load_truetype_font(args.font)
     else:
         user_font = load_truetype_font(None)
-    # get dir name, delete it and all files, then recreate empty dir
-    if args.dir:
+
+    if args.dir:  # get dir name, delete it and all files, then recreate empty dir
         out_dir = make_dir_name(args.dir)
     else:
         out_dir = make_dir_name(args.file.name)
