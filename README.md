@@ -5,6 +5,7 @@ usage: read_vcard.py [-h] [-m] [-a ADD] [-s SIZE] [-f FONT] [-d DIR] [-w] file
 This program create .png thumbs of vcards from vcf file
 
 positional arguments:
+
 		file        .vcf file with vcards data
 
 optional arguments:
