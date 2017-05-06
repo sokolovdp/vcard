@@ -8,6 +8,7 @@ positional arguments:
 		file        .vcf file with vcards data
 
 optional arguments:
+
 		-h, --help  show this help message and exit 
 		-m          split source vcf file on many single vcard .vcf files, each with .png thumb
 		-a ADD      add additional vcard parameter(s) to parse from .vcf file
