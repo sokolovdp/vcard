@@ -8,19 +8,13 @@ positional arguments:
   file        .vcf file with vcards data
 
 optional arguments:
-  -h, --help  show this help message and exit
-  
-  -m          split source vcf file on many single vcard .vcf files, each with .png thumb
-  
-  -a ADD      add additional vcard parameter(s) to parse from .vcf file
-  
-  -s SIZE     thumbs icons size, valid sizes are: 350x200(default) and 700x400
-  
-  -f FONT     full path of the font file to be used for thumbs
-  
-  -d DIR      directory with thumb files, default: <file>.thumbs
-  
-  -w          show program messages in window, default: text in the standard output
+    -h, --help  show this help message and exit 
+    -m          split source vcf file on many single vcard .vcf files, each with .png thumb
+    -a ADD      add additional vcard parameter(s) to parse from .vcf file
+    -s SIZE     thumbs icons size, valid sizes are: 350x200(default) and 700x400
+    -f FONT     full path of the font file to be used for thumbs
+    -d DIR      directory with thumb files, default: <file>.thumbs
+    -w          show program messages in window, default: text in the standard output
 
 
 To run vcard_read.py on Ubuntu:
