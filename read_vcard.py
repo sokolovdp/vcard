@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# version = 'ver 4.1b  May 6, 2017'
+# version = 'ver 4.2b  May 13, 2017'
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -27,7 +27,7 @@ from PIL import ImageDraw
 import tkinter as tk
 
 # Initialize global variables
-version = 'ver 4.1b  May 6, 2017'
+version = 'ver 4.2b  May 13, 2017'
 
 standard_parameters = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
 
@@ -299,17 +299,18 @@ def make_dir_name(dirname):
 
 if __name__ == '__main__':
 
-    ap = argparse.ArgumentParser(description='This program create .png thumbs of vcards from vcf file')
+    ap = argparse.ArgumentParser(description='This program create .png thumbs of vcards from .vcf file')
     ap.add_argument("-m", dest="multi", action="store_true", default=False,
-                    help="split source vcf file on many single vcard .vcf files, each with .png thumb")
+                    help="split .vcf file into many single vcard .vcf files and their .png thumbs")
     ap.add_argument("-a", dest="add", action="store",
-                    help="add additional vcard parameter(s) to parse from .vcf file")
+                    help="add extra vcard parameter(s) to parse from .vcf file, default parameters are: {}".format(
+                        ' '.join(standard_parameters)))
     ap.add_argument("-s", dest="size", action="store", default='350x200',
-                    help="thumbs icons size, valid sizes are: 350x200 (default) and 700x400")
+                    help=".png image size in pixels, valid sizes are: 350x200(default) and 700x400")
     ap.add_argument("-f", dest="font", action="store", type=argparse.FileType('rb'),
-                    help="full path of the font file to be used for thumbs")
+                    help="full path of the font file to be used for text in .png images")
     ap.add_argument("-d", dest="dir", action="store",
-                    help="directory with thumb files, default: <file>.thumbs")
+                    help="directory to write all .png thumbs, default name: <file>.thumbs")
     ap.add_argument("-w", dest="win", action="store_true", default=False,
                     help="show program messages in window, default: text in the standard output")
     ap.add_argument("file", type=argparse.FileType('rb'), help=".vcf file with vcards data")
