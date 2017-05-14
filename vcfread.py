@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# version = 'ver 4.2b  May 13, 2017'
+# version = 'ver 4.3b  May 14, 2017'
 # "THE BEER-WARE LICENSE" (Revision 42):
 # Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
 # this notice you can do whatever you want with this stuff. If we meet some day,
@@ -24,10 +24,14 @@ import random
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
-import tkinter as tk
+
+try:
+    import tkinter as tk
+except ImportError:
+    tk = None
 
 # Initialize global variables
-version = 'ver 4.2b  May 13, 2017'
+version = 'ver 4.3b  May 14, 2017'
 
 standard_parameters = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
 
@@ -344,5 +348,9 @@ if __name__ == '__main__':
         exit(4)
     else:
         current_thumb_parameters = available_thumb_sizes[args.size]
+
+    if args.win and not tk:
+        print("TKinter package is not installed, window mode is not available")
+        args.win = False
 
     main(Display(args.win), args.file.name, out_dir, user_font, args.multi)
