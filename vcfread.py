@@ -23,16 +23,22 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 
-try:
-    import tkinter as tk
-except ImportError:
-    tk = None
+# try:
+#     import tkinter as tk
+# except ImportError:
+tk = None
 
 # Initialize global variables
-version = '4.4'
+version = '4.4b'
+os_name = platform.system()
+
+THUMB_MODE = 1
+SPLIT_MODE = 2
+UNITY_MODE = 3
+modes = {'split': SPLIT_MODE, 'thumb': THUMB_MODE, 'unity': UNITY_MODE}
+
 standard_parameters = ['N', 'FN', 'TITLE', 'ORG', 'ADR', 'TEL', 'EMAIL', 'URL']  # PHOTO processed separately
-tk_window_geometry = '620x100+300+200'
-default_output_directory = "thumbs_folder"
+default_output_directory = "vcfread_folder"
 active_font = None
 UTF = 'utf-8'
 
@@ -72,13 +78,19 @@ available_thumb_sizes = {'350x200': small_size, '700x400': big_size}
 current_thumb_parameters = available_thumb_sizes['350x200']  # default value
 
 VCARD_PATTERN = "(?i)BEGIN:VCARD(?P<card>.*?)END:VCARD"  # pattern of VCARD, Case-insensitive
-PHOTO_PATTERN = "PHOTO;(?P<pars>[A-Za-z0-9;=]+?):[\s]*?(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of PHOTO Param
-BASE64_PATTERN = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of BASE64 code
-PARAM_PATTERN = "(?P<param>.*?):(?P<value>.*?)\n"  # pattern of any other PARAM
 p_vcard = re.compile(VCARD_PATTERN, re.DOTALL)
+PHOTO_PATTERN = "PHOTO;(?P<pars>[A-Za-z0-9;=]+?):[\s]*?(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of PHOTO Param
 p_photo = re.compile(PHOTO_PATTERN, re.DOTALL)
+BASE64_PATTERN = "^[ ]??(?P<base64>[A-Za-z0-9+/=]+?)\n"  # pattern of BASE64 code
 b64_value = re.compile(BASE64_PATTERN, re.MULTILINE)
+PARAM_PATTERN = "(?P<param>.*?):(?P<value>.*?)\n"  # pattern of any other PARAM
 p_param = re.compile(PARAM_PATTERN)
+INVALID_CHARS = r'[^A-Za-z0-9_-]'
+name_valid = re.compile(INVALID_CHARS)
+
+ubuntu_contact_manager = "kaddressbook"
+desktop_1 = "[Desktop Entry]\nVersion={0}\nType=Application\nTerminal=false\n".format(version)
+desktop_2 = "Name=KAddressBook\nExec=kaddressbook ./{0}\nIcon=./{1}\n"  # .format(ubuntu_contact_manager, "{}")
 
 
 class Display:
@@ -94,7 +106,7 @@ class Display:
         # create window for program messages
         self.mainWindow = tk.Tk()
         self.mainWindow.title("   VCF file reader  {}".format(version))
-        self.mainWindow.geometry(tk_window_geometry)
+        self.mainWindow.geometry('620x100+300+200')
         self.mainWindow['padx'] = 8
         self.text_box = tk.Text(self.mainWindow, state=tk.NORMAL)
         self.text_box.pack()
@@ -107,6 +119,9 @@ class Display:
 
     def window(self):
         return not self._stdout
+
+
+display = Display(False)
 
 
 def get_encoding(filename):
@@ -122,7 +137,7 @@ def get_encoding(filename):
     return result['encoding']
 
 
-def parse_vcf_file(display, vcf_file):
+def parse_vcf_file(vcf_file):
     """
     Parse VCF file into list of dicts with vcard params
 
@@ -188,7 +203,7 @@ def parse_vcf_file(display, vcf_file):
     return cards_list
 
 
-def create_thumbnail(display, card_info, filename):
+def create_thumbnail(card_info, filename):
     """
     Create image of the vcard and store in the png file with given name
 
@@ -215,11 +230,13 @@ def create_thumbnail(display, card_info, filename):
             y += current_thumb_parameters['OFF']
     try:
         background.save(filename)
+        return filename
     except IOError:
         display.write("i/o error during writing thumb file: {}".format(filename))
+        return None
 
 
-def write_vcf_file(display, filename, vcard_text):
+def write_vcard_to_vcf_file(filename, vcard_text):
     """
     Write string with single vcard data into the vcf file
 
@@ -236,15 +253,19 @@ def write_vcf_file(display, filename, vcard_text):
         display.write("i/o error during writing single vcf file: {}".format(filename))
 
 
-def split_vcf_file(display, vfile, to_dir):
+def get_short_filename(filename):
+    return ntpath.basename(filename).split('.')[0]
+
+
+def split_vcf_file(vfile):
     """
     Split vcard file into many single vcard files.
     
     display:  display object for messaging
     vfile:  file object in opened state 
-    Return list of strings with created file names
+    Return list of strings with created vcf file names
     """
-    base_name = ntpath.basename(vfile.name).split('.')[0]
+    base_name = get_short_filename(vfile.name)
     data = vfile.read()
     list_of_cards = list()
     for match_vcard in p_vcard.finditer(data):
@@ -253,41 +274,42 @@ def split_vcf_file(display, vfile, to_dir):
         list_of_cards.append(vcard_text)
     files_names = list()
     if len(list_of_cards) == 1:
-        filename = "{}{}{}.vcf".format(to_dir, '/', base_name)
+        filename = "{}.vcf".format(base_name)
         files_names.append(filename)
-        write_vcf_file(display, filename, list_of_cards[0])
+        write_vcard_to_vcf_file(filename, list_of_cards[0])
     elif len(list_of_cards) > 1:
         for i, vcard_text in enumerate(list_of_cards):
-            filename = "{}{}{}_{:0>4}.vcf".format(to_dir, '/', base_name, i + 1)
+            filename = "{}_{:0>4}.vcf".format(base_name, i + 1)
             files_names.append(filename)
-            write_vcf_file(display, filename, vcard_text)
+            write_vcard_to_vcf_file(filename, vcard_text)
     return files_names
 
 
-def convert_vcf_file_to_thumbs(display, vfile, thumbs_dir):
+def convert_vcf_file_to_thumbs(vfile):
     """
     Convert vcard file into thumbs files.
 
     display:  display object for messaging
     vfile:  file object in opened state
-    thumbs_dir: string with thumbs subdirectory name
-    Return number of created thumb files
+    Return list of strings with created thumb file names
     """
-    list_of_cards = parse_vcf_file(display, vfile)
-    base_name = ntpath.basename(vfile.name).split('.')[0]
-    current_directory = os.getcwd()
-    os.chdir(thumbs_dir)
+    list_of_cards = parse_vcf_file(vfile)
+    base_name = get_short_filename(vfile.name)
+    thumb_files = list()
     if len(list_of_cards) == 1:  # single vcard file
         card = list_of_cards[0]
-        create_thumbnail(display, card, "{}.png".format(base_name))
+        thumb = create_thumbnail(card, "{}.png".format(base_name))
+        if thumb:
+            thumb_files.append(thumb)
     elif len(list_of_cards) > 1:  # multi vcards file
         for i, card in enumerate(list_of_cards):
-            create_thumbnail(display, card, "{}_{:0>4}.png".format(base_name, i))
-    os.chdir(current_directory)
-    return len(list_of_cards)
+            thumb = create_thumbnail(card, "{}_{:0>4}.png".format(base_name, i))
+            if thumb:
+                thumb_files.append(thumb)
+    return thumb_files
 
 
-def process_vcf_file(display, filename, thumbs_dir, split_mode):
+def process_vcf_file(filename, thumbs_dir, mode):
     """
     Convert vcard file into thumbs or single vcards and thumbs files depending on split_mode
 
@@ -297,27 +319,45 @@ def process_vcf_file(display, filename, thumbs_dir, split_mode):
     Return nothing
     """
     vcf = open(filename, 'r', encoding=get_encoding(filename))
-    if not split_mode:
-        n = convert_vcf_file_to_thumbs(display, vcf, thumbs_dir)
-        display.write("loaded {} vcards, from file: {}".format(n, filename))
+    current_directory = os.getcwd()
+    os.chdir(thumbs_dir)
+    if mode == THUMB_MODE:  # thumb mode
+        thumb_files = convert_vcf_file_to_thumbs(vcf)
+        display.write("loaded {} vcards, from file: {}".format(len(thumb_files), filename))
+    elif mode == SPLIT_MODE:  # split mode
+        vcf_files = split_vcf_file(vcf)
+        display.write("file {1} was split into {0} single vcard file(s)".format(len(vcf_files), filename))
+    elif mode == UNITY_MODE:  # naut mode
+        vcf_files = split_vcf_file(vcf)
+        display.write("file {1} was split into {0} unity desktop folder(s)".format(len(vcf_files), filename))
+        for vcf_file_name in vcf_files:
+            with open(vcf_file_name, 'r', encoding=UTF) as tf:
+                thumb_file_name = convert_vcf_file_to_thumbs(tf)[0]  # create thumb file
+            new_dir = get_short_filename(vcf_file_name)
+            create_output_directory(new_dir)
+            shutil.move(vcf_file_name, new_dir)
+            shutil.move(thumb_file_name, new_dir)
+            os.chdir(new_dir)
+            with open("{}.desktop".format(new_dir), 'w', encoding=UTF) as f:
+                f.write(desktop_1 + desktop_2.format(vcf_file_name, thumb_file_name))
+            os.chdir("..")
     else:
-        files = split_vcf_file(display, vcf, thumbs_dir)
-        display.write("file {1} was split into {0} single vcard file(s)".format(len(files), filename))
-        for file in files:
-            f = open(file, 'r', encoding=UTF)
-            convert_vcf_file_to_thumbs(display, f, thumbs_dir)
-            f.close()
+        pass
+    os.chdir(current_directory)
     vcf.close()
 
 
-def main(vcf_files, display, thumbs_dir, split_mode):
-    for filename in vcf_files:
-        process_vcf_file(display, filename, thumbs_dir, split_mode)
-    if not split_mode:
-        display.write("thumbs files were placed into directory: {}".format(thumbs_dir))
+def main(vcf_files, thumbs_dir, mode):
+    for filename in vcf_files:  # process all .vcf files from the list
+        process_vcf_file(filename, thumbs_dir, mode)
+    if mode == SPLIT_MODE:  # split mode
+        display.write("single vcard files were placed into subdirectory: {}".format(thumbs_dir))
+    elif mode == THUMB_MODE:  # thumb mode
+        display.write("thumbs files were placed into subdirectory: {}".format(thumbs_dir))
+    elif mode == UNITY_MODE:  # nau mode
+        display.write("unity.desktop folders were placed into subdirectory: {}".format(thumbs_dir))
     else:
-        display.write("single vcard & thumbs files were placed into directory: {}".format(thumbs_dir))
-
+        pass
     if display.window():
         display.mainWindow.mainloop()
 
@@ -330,7 +370,6 @@ def load_truetype_font(font_file):
     font_file:  string with path to the font file
     Return font object
     """
-    os_name = platform.system()
     font_size = current_thumb_parameters['font_size_linux']
     temp_file = current_thumb_parameters['linux_font']
     if os_name == 'Linux':
@@ -356,10 +395,9 @@ def create_output_directory(dirname):
     """
     (re)Creates and clean subdirectory for thumbs files in the current directory
     
-    Return string with directory name
+    Return string with valid directory name
     """
-    if not dirname.isalpha():
-        dirname = default_output_directory
+    dirname = name_valid.sub('_', dirname)  # replace all invalid symbols with '_'
     try:
         shutil.rmtree(dirname, ignore_errors=True)  # remove old thumb directory and all files in it
         os.makedirs(dirname)  # create thumbs directory
@@ -398,24 +436,39 @@ def check_file(filename):
     except IOError:
         raise argparse.ArgumentTypeError("no such file {0}".format(filename))
     except:
-        raise argparse.ArgumentTypeError("can't open file {0}".format(filename))
+        raise argparse.ArgumentTypeError("open file error {0}".format(filename))
     f.close()
     return filename
+
+
+def check_mode(mode):
+    """
+    Check if the args parameter mode has valid value
+
+    Return int value of mode operation
+    """
+    if mode.lower() not in modes:
+        raise argparse.ArgumentTypeError("invalid mode {0}, valid values are {1}".format(mode, ', '.join(modes.keys())))
+    return modes[mode.lower()]
 
 
 if __name__ == '__main__':
 
     ap = argparse.ArgumentParser(
-        description='vcfread.py v{} creates .png thumbs of vcards from .vcf file'.format(version))
+        description='vcfread.py v{0} processes .vcf files in {1} modes: {2}'.format(version, len(modes),
+                                                                                    ', '.join(modes.keys())))
 
     source = ap.add_mutually_exclusive_group(required=True)  # two main parameters: file.vcf or directory with vcf files
-    source.add_argument("--xdir", dest="xdir", action="store", type=check_directory,
+    source.add_argument("--dir", dest="dir", action="store", type=check_directory,
                         help="process all .vcf files in the directory, for the current directory use '$(pwd)'")
     source.add_argument("--file", dest="file", action="store", type=check_file,
-                        help="process single .vcf file with vcards data")
+                        help="process .vcf file with vcards data")
 
-    ap.add_argument("--split", dest="split", action="store_true", default=False,
-                    help="split .vcf file into many single vcard .vcf files and their .png thumbs")
+    ap.add_argument("--mode", dest="mode", action="store", required=True, type=check_mode,
+                    help="1) split - create many single vcard files, 2) thumb - create .png images, "
+                         "3) unity - create folder with vcf, thumb and .desktop files"
+                    )
+
     ap.add_argument("--add", dest="add", action="store",
                     help="add extra vcard parameter(s) to parse from .vcf file, default parameters are: {}".format(
                         ' '.join(standard_parameters)))
@@ -453,15 +506,15 @@ if __name__ == '__main__':
 
     if args.win and not tk:  # check if window mode is activated
         print("TKinter package is not installed, window mode is not available")
-        args.win = False
+    display = Display(False)  # later remove Display mode
 
     files_for_parsing = list()
     if args.file:  # create list of vcf files to processing
         files_for_parsing.append(args.file)
     else:
-        files_for_parsing = [os.path.join(args.xdir, file) for file in os.listdir(args.xdir) if file.endswith('.vcf')]
+        files_for_parsing = [os.path.join(args.dir, file) for file in os.listdir(args.dir) if file.endswith('.vcf')]
         if not files_for_parsing:
-            print('no vcf files in the directory: {}'.format(args.xdir))
+            print('no vcf files in the directory: {}'.format(args.dir))
             exit()
 
-    main(files_for_parsing, Display(args.win), out_dir, args.split)
+    main(files_for_parsing, out_dir, args.mode)
