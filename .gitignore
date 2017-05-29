@@ -1,12 +1,5 @@
-#all directorie to ignore
-.idea/
-experiments/
-instructions/
-old_versions/
-other_solutions/
-screenshots/
-unit_tests/
-vcfread_folder/
+#ignore all subfolders
+**/
 
 # test and doc file
 *.vcf
