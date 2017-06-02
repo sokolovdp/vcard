@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-#                "THE BEER-WARE LICENSE":
-# Dmitrii Sokolov <sokolovdp@gmail.com> wrote this code. As long as you retain
-# this notice you can do whatever you want with this stuff. If we meet some day,
-# and you think this stuff is worth it, you can buy me a beer in return
-#   source code: https://github.com/sokolovdp/vcard/blob/master/vcfread.py
-# The idea of "beer license" was borrowed from Terry Yin <terry.yinzhe@gmail.com>
-# ----------------------------------------------------------------------------
 
 import os
 import sys
@@ -23,13 +14,8 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 
-# try:
-#     import tkinter as tk
-# except ImportError:
-tk = None
-
 # Initialize global variables
-version = '4.4b'
+version = '4.5 beta'
 os_name = platform.system()
 
 THUMB_MODE = 1
@@ -89,39 +75,8 @@ INVALID_CHARS = r'[^A-Za-z0-9_-]'
 name_valid = re.compile(INVALID_CHARS)
 
 ubuntu_contact_manager = "kaddressbook"
-desktop_1 = "[Desktop Entry]\nVersion={0}\nType=Application\nTerminal=false\n".format(version)
-desktop_2 = "Name=KAddressBook\nExec=kaddressbook ./{0}\nIcon=./{1}\n"  # .format(ubuntu_contact_manager, "{}")
-
-
-class Display:
-    """
-    Window object to display program messages, use TKinter window or sys.stdout
-    """
-
-    def __init__(self, window_mode):
-        self._stdout = False
-        if not window_mode:
-            self._stdout = True
-            return
-        # create window for program messages
-        self.mainWindow = tk.Tk()
-        self.mainWindow.title("   VCF file reader  {}".format(version))
-        self.mainWindow.geometry('620x100+300+200')
-        self.mainWindow['padx'] = 8
-        self.text_box = tk.Text(self.mainWindow, state=tk.NORMAL)
-        self.text_box.pack()
-
-    def write(self, text):
-        if self._stdout:
-            print(text)
-            return
-        self.text_box.insert("end", "{}\n".format(text))
-
-    def window(self):
-        return not self._stdout
-
-
-display = Display(False)
+desktop_1 = "[Desktop Entry]\nVersion={0}\nEncoding=UTF-8\nType=Application\nTerminal=false\n".format(version)
+desktop_2 = 'X-MultipleArgs=false\nName={0}\nExec=gedit "{0}"\nIcon="{1}"\n'  # .format(ubuntu_contact_manager, "{}")
 
 
 def get_encoding(filename):
@@ -163,12 +118,12 @@ def parse_vcf_file(vcf_file):
             try:
                 image_bytes = base64.b64decode(photo_code)
             except (ValueError, Exception):
-                display.write('error in base64 encoding, image data ignored')
+                print('error in base64 encoding, image data ignored')
             else:
                 try:
                     image = Image.open(io.BytesIO(image_bytes))
                 except TypeError:
-                    display.write('error in image data, image ignored')
+                    print('error in image data, image ignored')
                 else:
                     vcard_params["PHOTO"] = image
             vcard_head = vcard_text[:start_photo]
@@ -190,7 +145,7 @@ def parse_vcf_file(vcf_file):
                 vcard_params[param] = value
         if vcard_params:
             if (not n_given) and (not fn_given):
-                display.write("no name parameters (N or FN) in data, vcard ignored")
+                print("no name parameters (N or FN) in data, vcard ignored")
                 continue
             if n_given and fn_given:  # there must only FN parameter in vcard data
                 del vcard_params['N']
@@ -232,7 +187,7 @@ def create_thumbnail(card_info, filename):
         background.save(filename)
         return filename
     except IOError:
-        display.write("i/o error during writing thumb file: {}".format(filename))
+        print("i/o error during writing thumb file: {}".format(filename))
         return None
 
 
@@ -250,7 +205,7 @@ def write_vcard_to_vcf_file(filename, vcard_text):
         vf.write(vcard_text)
         vf.close()
     except IOError:
-        display.write("i/o error during writing single vcf file: {}".format(filename))
+        print("i/o error during writing single vcf file: {}".format(filename))
 
 
 def get_short_filename(filename):
@@ -323,13 +278,13 @@ def process_vcf_file(filename, thumbs_dir, mode):
     os.chdir(thumbs_dir)
     if mode == THUMB_MODE:  # thumb mode
         thumb_files = convert_vcf_file_to_thumbs(vcf)
-        display.write("loaded {} vcards, from file: {}".format(len(thumb_files), filename))
+        print("loaded {} vcards, from file: {}".format(len(thumb_files), filename))
     elif mode == SPLIT_MODE:  # split mode
         vcf_files = split_vcf_file(vcf)
-        display.write("file {1} was split into {0} single vcard file(s)".format(len(vcf_files), filename))
+        print("file {1} was split into {0} single vcard file(s)".format(len(vcf_files), filename))
     elif mode == UNITY_MODE:  # naut mode
         vcf_files = split_vcf_file(vcf)
-        display.write("file {1} was split into {0} unity desktop folder(s)".format(len(vcf_files), filename))
+        print("file {1} was split into {0} unity desktop folder(s)".format(len(vcf_files), filename))
         for vcf_file_name in vcf_files:
             with open(vcf_file_name, 'r', encoding=UTF) as tf:
                 thumb_file_name = convert_vcf_file_to_thumbs(tf)[0]  # create thumb file
@@ -351,15 +306,13 @@ def main(vcf_files, thumbs_dir, mode):
     for filename in vcf_files:  # process all .vcf files from the list
         process_vcf_file(filename, thumbs_dir, mode)
     if mode == SPLIT_MODE:  # split mode
-        display.write("single vcard files were placed into subdirectory: {}".format(thumbs_dir))
+        print("single vcard files were placed into subdirectory: {}".format(thumbs_dir))
     elif mode == THUMB_MODE:  # thumb mode
-        display.write("thumbs files were placed into subdirectory: {}".format(thumbs_dir))
+        print("thumbs files were placed into subdirectory: {}".format(thumbs_dir))
     elif mode == UNITY_MODE:  # nau mode
-        display.write("unity.desktop folders were placed into subdirectory: {}".format(thumbs_dir))
+        print("folders with .desktop files were placed into subdirectory: {}".format(thumbs_dir))
     else:
         pass
-    if display.window():
-        display.mainWindow.mainloop()
 
 
 def load_truetype_font(font_file):
@@ -479,8 +432,6 @@ if __name__ == '__main__':
     ap.add_argument("--todir", dest="todir", action="store", default=default_output_directory,
                     help="subdirectory for .png thumbs, attention!!! all files in this directory will be deleted!"
                          " default output directory is: {}".format(default_output_directory))
-    ap.add_argument("--win", dest="win", action="store_true", default=False,
-                    help="if given show messages in window, if not - messages will go to the console output")
 
     args = ap.parse_args(sys.argv[1:])
 
@@ -503,10 +454,6 @@ if __name__ == '__main__':
         exit(4)
     else:
         current_thumb_parameters = available_thumb_sizes[args.size]
-
-    if args.win and not tk:  # check if window mode is activated
-        print("TKinter package is not installed, window mode is not available")
-    display = Display(False)  # later remove Display mode
 
     files_for_parsing = list()
     if args.file:  # create list of vcf files to processing
