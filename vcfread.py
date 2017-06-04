@@ -74,10 +74,6 @@ p_param = re.compile(PARAM_PATTERN)
 INVALID_CHARS = r'[^A-Za-z0-9_-]'
 name_valid = re.compile(INVALID_CHARS)
 
-ubuntu_contact_manager = "kaddressbook"
-desktop_1 = "[Desktop Entry]\nVersion={0}\nEncoding=UTF-8\nType=Application\nTerminal=false\n".format(version)
-desktop_2 = 'X-MultipleArgs=false\nName={0}\nExec=gedit "{0}"\nIcon="{1}"\n'  # .format(ubuntu_contact_manager, "{}")
-
 
 def get_encoding(filename):
     """
@@ -264,6 +260,39 @@ def convert_vcf_file_to_thumbs(vfile):
     return thumb_files
 
 
+def create_desktop_file(file, vcfname, thumbname, vcardata):
+    vcard = vcardata[0]
+    line_1 = "[Desktop Entry]\nVersion={0}\nEncoding=UTF-8\nType=Application\nTerminal=false\n".format(version)
+    line_2 = "X-MultipleArgs=false\nMimeType=x-scheme-handler/mailto;application/x-xpinstall;\n"
+    line_3 = "StartupNotify=true\nGenericName=VCF File Contact Desktop File\nComment=VCF File\nCategories=Contact;\n"
+    line_4 = 'Name={0}\nExec=gedit "{1}"\nIcon="{2}"\n'.format(vcard['FN'], vcfname, thumbname)
+    line_5 = "Keywords:Contact;VCF file;{0};{1}\n".format(vcard['FN'], vcard.get('ORG', ''))
+
+    email = vcard.get('EMAIL', '')
+    tele = vcard.get('TEL', '')
+
+    line_6 = "Actions="
+    if email:
+        line_6 += "Thunderbird Compose ID1 Email1;"
+    if tele:
+        line_6 += "Skype Call Tell;"
+    line_6 += '\n'
+
+    if email:
+        line_7 = "[Desktop Action Thunderbird Compose ID1 Email1]\nName=Thunderbird Compose ID1 Email1\n" \
+                 "OnlyShowIn=Messaging Menu;Unity;\n"
+        line_8 = "Exec=thunderbird -compose preselectid='id1',to='{}', subject='Real',body=''," \
+                 "attachment='',cc='',bcc=''\n".format(email)
+        line_6 += line_7 + line_8
+
+    if tele:
+        line_7 = "[Desktop Action Skype Call Tell]\nName=Skype Call Cell\nOnlyShowIn=Messaging Menu;Unity;\n"
+        line_8 = "Exec=skype --callto {}".format(tele.replace(' ', ''))
+        line_6 += line_7 + line_8
+
+    file.write(line_1 + line_2 + line_3 + line_4 + line_5 + line_6)
+
+
 def process_vcf_file(filename, thumbs_dir, mode):
     """
     Convert vcard file into thumbs or single vcards and thumbs files depending on split_mode
@@ -293,8 +322,11 @@ def process_vcf_file(filename, thumbs_dir, mode):
             shutil.move(vcf_file_name, new_dir)
             shutil.move(thumb_file_name, new_dir)
             os.chdir(new_dir)
+            # create desktop file
+            with open(vcf_file_name, 'r', encoding=UTF) as f:
+                vcard_data = parse_vcf_file(f)
             with open("{}.desktop".format(new_dir), 'w', encoding=UTF) as f:
-                f.write(desktop_1 + desktop_2.format(vcf_file_name, thumb_file_name))
+                create_desktop_file(f, vcf_file_name, thumb_file_name, vcard_data)
             os.chdir("..")
     else:
         pass
