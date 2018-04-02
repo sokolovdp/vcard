@@ -78,7 +78,6 @@ name_valid = re.compile(INVALID_CHARS)
 def get_encoding(filename):
     """
     Defines encoding of the file
-    
     filename:  string with file name
     Return the string of encoding format
     """
@@ -88,11 +87,9 @@ def get_encoding(filename):
     return result['encoding']
 
 
-def parse_vcf_file(vcf_file):
+def parse_vcf_file(vcf_file: io.TextIOWrapper) -> list:
     """
     Parse VCF file into list of dicts with vcard params
-
-    display:  display object for messaging
     vcf_file: string with file name
     Return the list of dicts with vcard parameters
     """
@@ -154,11 +151,9 @@ def parse_vcf_file(vcf_file):
     return cards_list
 
 
-def create_thumbnail(card_info, filename):
+def create_thumbnail(card_info: dict, filename: str) -> str:
     """
     Create image of the vcard and store in the png file with given name
-
-    display:  display object for messaging
     card_info: dict with vcard data
     filename:  string 
     Return nothing
@@ -184,14 +179,11 @@ def create_thumbnail(card_info, filename):
         return filename
     except IOError:
         print("i/o error during writing thumb file: {}".format(filename))
-        return None
 
 
-def write_vcard_to_vcf_file(filename, vcard_text):
+def write_vcard_to_vcf_file(filename: str, vcard_text: str):
     """
     Write string with single vcard data into the vcf file
-
-    display:  display object for messaging
     filename:  string 
     vcard_text: string with vcard data
     Return nothing
@@ -204,15 +196,13 @@ def write_vcard_to_vcf_file(filename, vcard_text):
         print("i/o error during writing single vcf file: {}".format(filename))
 
 
-def get_short_filename(filename):
-    return ntpath.basename(filename).split('.')[0]
+def get_short_filename(filename: str) -> str:
+    return str(ntpath.basename(filename).split('.')[0])
 
 
-def split_vcf_file(vfile):
+def split_vcf_file(vfile: io.TextIOWrapper) -> list:
     """
     Split vcard file into many single vcard files.
-    
-    display:  display object for messaging
     vfile:  file object in opened state 
     Return list of strings with created vcf file names
     """
@@ -225,22 +215,20 @@ def split_vcf_file(vfile):
         list_of_cards.append(vcard_text)
     files_names = list()
     if len(list_of_cards) == 1:
-        filename = "{}.vcf".format(base_name)
+        filename = "{}.vcf".format(base_name).replace(" ", "_")
         files_names.append(filename)
         write_vcard_to_vcf_file(filename, list_of_cards[0])
     elif len(list_of_cards) > 1:
         for i, vcard_text in enumerate(list_of_cards):
-            filename = "{}_{:0>4}.vcf".format(base_name, i + 1)
+            filename = "{}_{:0>4}.vcf".format(base_name, i + 1).replace(" ", "_")
             files_names.append(filename)
             write_vcard_to_vcf_file(filename, vcard_text)
     return files_names
 
 
-def convert_vcf_file_to_thumbs(vfile):
+def convert_vcf_file_to_thumbs(vfile: io.TextIOWrapper) -> list:
     """
     Convert vcard file into thumbs files.
-
-    display:  display object for messaging
     vfile:  file object in opened state
     Return list of strings with created thumb file names
     """
@@ -260,7 +248,7 @@ def convert_vcf_file_to_thumbs(vfile):
     return thumb_files
 
 
-def create_desktop_file(file, vcfname, thumbname, vcardata):
+def create_desktop_file(file: io.TextIOWrapper, vcfname: str, thumbname: str, vcardata: list):
     vcard = vcardata[0]
     line_1 = "[Desktop Entry]\nVersion={0}\nEncoding=UTF-8\nType=Application\nTerminal=false\n".format(version)
     line_2 = "X-MultipleArgs=false\nMimeType=x-scheme-handler/mailto;application/x-xpinstall;\n"
@@ -293,11 +281,9 @@ def create_desktop_file(file, vcfname, thumbname, vcardata):
     file.write(line_1 + line_2 + line_3 + line_4 + line_5 + line_6)
 
 
-def process_vcf_file(filename, thumbs_dir, mode):
+def process_vcf_file(filename: str, thumbs_dir: str, mode: int):
     """
     Convert vcard file into thumbs or single vcards and thumbs files depending on split_mode
-
-    display:  display object for messaging
     filename:  string with vacrd filename
     thumbs_dir: string with thumbs subdirectory name
     Return nothing
@@ -307,7 +293,7 @@ def process_vcf_file(filename, thumbs_dir, mode):
     os.chdir(thumbs_dir)
     if mode == THUMB_MODE:  # thumb mode
         thumb_files = convert_vcf_file_to_thumbs(vcf)
-        print("loaded {} vcards, from file: {}".format(len(thumb_files), filename))
+        print("loaded {0} vcards, from file: {1}".format(len(thumb_files), filename))
     elif mode == SPLIT_MODE:  # split mode
         vcf_files = split_vcf_file(vcf)
         print("file {1} was split into {0} single vcard file(s)".format(len(vcf_files), filename))
@@ -334,24 +320,23 @@ def process_vcf_file(filename, thumbs_dir, mode):
     vcf.close()
 
 
-def main(vcf_files, thumbs_dir, mode):
+def main(vcf_files: list, thumbs_dir: str, mode: int):
     for filename in vcf_files:  # process all .vcf files from the list
         process_vcf_file(filename, thumbs_dir, mode)
     if mode == SPLIT_MODE:  # split mode
-        print("single vcard files were placed into subdirectory: {}".format(thumbs_dir))
+        print("single vcard files were placed into subdirectory: {0}".format(thumbs_dir))
     elif mode == THUMB_MODE:  # thumb mode
-        print("thumbs files were placed into subdirectory: {}".format(thumbs_dir))
+        print("thumbs files were placed into subdirectory: {0}".format(thumbs_dir))
     elif mode == UNITY_MODE:  # nau mode
-        print("folders with .desktop files were placed into subdirectory: {}".format(thumbs_dir))
+        print("folders with .desktop files were placed into subdirectory: {0}".format(thumbs_dir))
     else:
         pass
 
 
-def load_truetype_font(font_file):
+def load_truetype_font(font_file: str) -> ImageFont:
     """
     Load true type font which will be used for thumbs images
     check which OS is running and install proper truetype font
-    
     font_file:  string with path to the font file
     Return font object
     """
@@ -370,16 +355,15 @@ def load_truetype_font(font_file):
     try:
         font = ImageFont.truetype(font=font_file, size=font_size, encoding='unic')
     except IOError:
-        print("cannot open font file: {}".format(font_file))
+        print("cannot open font file: {0}".format(font_file))
         exit(2)
     else:
         return font
 
 
-def create_output_directory(dirname):
+def create_output_directory(dirname: str) -> str:
     """
     (re)Creates and clean subdirectory for thumbs files in the current directory
-    
     Return string with valid directory name
     """
     dirname = name_valid.sub('_', dirname)  # replace all invalid symbols with '_'
@@ -387,15 +371,14 @@ def create_output_directory(dirname):
         shutil.rmtree(dirname, ignore_errors=True)  # remove old thumb directory and all files in it
         os.makedirs(dirname)  # create thumbs directory
     except OSError:
-        print("access error: directory {} is used by another process".format(dirname))
+        print("access error: directory {0} is used by another process".format(dirname))
         exit(3)
     return dirname
 
 
-def check_directory(dirname):
+def check_directory(dirname: str) -> str:
     """
     Check if the args parameter is a valid existing input directory
-    
     Return string with directory name
     """
     if dirname == "$(pwd)":
@@ -408,10 +391,9 @@ def check_directory(dirname):
     return dirname
 
 
-def check_file(filename):
+def check_file(filename: str) -> str:
     """
     Check if the args parameter is a valid existing input file
-
     Return string with file name
     """
     if filename.endswith('/'):
@@ -420,16 +402,15 @@ def check_file(filename):
         f = open(filename, 'rb')
     except IOError:
         raise argparse.ArgumentTypeError("no such file {0}".format(filename))
-    except:
-        raise argparse.ArgumentTypeError("open file error {0}".format(filename))
+    except Exception as e:
+        raise argparse.ArgumentTypeError("file {0} open error {1}".format(filename, str(e)))
     f.close()
     return filename
 
 
-def check_mode(mode):
+def check_mode(mode: str) -> int:
     """
     Check if the args parameter mode has valid value
-
     Return int value of mode operation
     """
     if mode.lower() not in modes:
@@ -463,7 +444,7 @@ if __name__ == '__main__':
                     help="full path of the font file to be used for text in .png images")
     ap.add_argument("--todir", dest="todir", action="store", default=default_output_directory,
                     help="subdirectory for .png thumbs, attention!!! all files in this directory will be deleted!"
-                         " default output directory is: {}".format(default_output_directory))
+                         " default output directory is: {0}".format(default_output_directory))
 
     args = ap.parse_args(sys.argv[1:])
 
@@ -472,12 +453,12 @@ if __name__ == '__main__':
             if p not in standard_parameters:
                 standard_parameters.append(p)
             else:
-                print("vcard parameter {} is already included in the parser".format(p))
+                print("vcard parameter {0} is already included in the parser".format(p))
 
     if args.font:  # check and load font file
         active_font = load_truetype_font(args.font)
     else:
-        active_font = load_truetype_font(None)
+        active_font = load_truetype_font('')
 
     out_dir = create_output_directory(args.todir)  # get dir name, delete it and all files, then recreate empty dir
 
@@ -493,7 +474,7 @@ if __name__ == '__main__':
     else:
         files_for_parsing = [os.path.join(args.dir, file) for file in os.listdir(args.dir) if file.endswith('.vcf')]
         if not files_for_parsing:
-            print('no vcf files in the directory: {}'.format(args.dir))
+            print('no vcf files in the directory: {0}'.format(args.dir))
             exit()
 
     main(files_for_parsing, out_dir, args.mode)
