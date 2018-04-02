@@ -8,7 +8,6 @@ import argparse
 import shutil
 import base64
 import platform
-import chardet
 from chardet.universaldetector import UniversalDetector
 import ntpath
 from PIL import Image
@@ -16,7 +15,7 @@ from PIL import ImageFont
 from PIL import ImageDraw
 
 # Initialize global variables
-version = '4.5 beta'
+version = '4.7 beta'
 os_name = platform.system()
 
 THUMB_MODE = 1
