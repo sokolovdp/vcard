@@ -9,6 +9,7 @@ import shutil
 import base64
 import platform
 import chardet
+from chardet.universaldetector import UniversalDetector
 import ntpath
 from PIL import Image
 from PIL import ImageFont
@@ -81,10 +82,14 @@ def get_encoding(filename):
     filename:  string with file name
     Return the string of encoding format
     """
+    detector = UniversalDetector()
     with open(filename, "rb") as f:
-        raw_data = f.read()
-    result = chardet.detect(raw_data)
-    return result['encoding']
+        for line in f.readlines():
+            detector.feed(line)
+            if detector.done:
+                break
+    detector.close()
+    return detector.result['encoding']
 
 
 def parse_vcf_file(vcf_file: io.TextIOWrapper) -> list:
@@ -220,7 +225,7 @@ def split_vcf_file(vfile: io.TextIOWrapper) -> list:
         write_vcard_to_vcf_file(filename, list_of_cards[0])
     elif len(list_of_cards) > 1:
         for i, vcard_text in enumerate(list_of_cards):
-            filename = "{}_{:0>4}.vcf".format(base_name, i + 1).replace(" ", "_")
+            filename = "{0}_{1:0>4}.vcf".format(base_name, i + 1).replace(" ", "_")
             files_names.append(filename)
             write_vcard_to_vcf_file(filename, vcard_text)
     return files_names
@@ -237,12 +242,12 @@ def convert_vcf_file_to_thumbs(vfile: io.TextIOWrapper) -> list:
     thumb_files = list()
     if len(list_of_cards) == 1:  # single vcard file
         card = list_of_cards[0]
-        thumb = create_thumbnail(card, "{}.png".format(base_name))
+        thumb = create_thumbnail(card, "{0}.png".format(base_name))
         if thumb:
             thumb_files.append(thumb)
     elif len(list_of_cards) > 1:  # multi vcards file
         for i, card in enumerate(list_of_cards):
-            thumb = create_thumbnail(card, "{}_{:0>4}.png".format(base_name, i))
+            thumb = create_thumbnail(card, "{0}_{1:0>4}.png".format(base_name, i))
             if thumb:
                 thumb_files.append(thumb)
     return thumb_files
@@ -269,13 +274,13 @@ def create_desktop_file(file: io.TextIOWrapper, vcfname: str, thumbname: str, vc
     if email:
         line_7 = "[Desktop Action Thunderbird Compose ID1 Email1]\nName=Thunderbird Compose ID1 Email1\n" \
                  "OnlyShowIn=Messaging Menu;Unity;\n"
-        line_8 = "Exec=thunderbird -compose preselectid='id1',to='{}', subject='Real',body=''," \
+        line_8 = "Exec=thunderbird -compose preselectid='id1',to='{0}', subject='Real',body=''," \
                  "attachment='',cc='',bcc=''\n".format(email)
         line_6 += line_7 + line_8
 
     if tele:
         line_7 = "[Desktop Action Skype Call Tell]\nName=Skype Call Cell\nOnlyShowIn=Messaging Menu;Unity;\n"
-        line_8 = "Exec=skype --callto {}".format(tele.replace(' ', ''))
+        line_8 = "Exec=skype --callto {0}".format(tele.replace(' ', ''))
         line_6 += line_7 + line_8
 
     file.write(line_1 + line_2 + line_3 + line_4 + line_5 + line_6)
@@ -311,7 +316,7 @@ def process_vcf_file(filename: str, thumbs_dir: str, mode: int):
             # create desktop file
             with open(vcf_file_name, 'r', encoding=UTF) as f:
                 vcard_data = parse_vcf_file(f)
-            with open("{}.desktop".format(new_dir), 'w', encoding=UTF) as f:
+            with open("{0}.desktop".format(new_dir), 'w', encoding=UTF) as f:
                 create_desktop_file(f, vcf_file_name, thumb_file_name, vcard_data)
             os.chdir("..")
     else:
