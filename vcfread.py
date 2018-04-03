@@ -160,7 +160,7 @@ def create_thumbnail(card_info: dict, filename: str) -> str:
     Create image of the vcard and store in the png file with given name
     card_info: dict with vcard data
     filename:  string 
-    Return nothing
+    Returns: file name
     """
     background = Image.new('RGBA', current_thumb_parameters['thumb_size'], current_thumb_parameters['background'])
     draw = ImageDraw.Draw(background)
@@ -292,18 +292,20 @@ def process_vcf_file(filename: str, thumbs_dir: str, mode: int):
     thumbs_dir: string with thumbs subdirectory name
     Return nothing
     """
-    vcf = open(filename, 'r', encoding=get_encoding(filename))
+    encoding = get_encoding(filename)
+    vcf = open(filename, 'r', encoding=encoding)
+    print("input vcf file: '{0}' encoding: {1}".format(filename, encoding))
     current_directory = os.getcwd()
     os.chdir(thumbs_dir)
     if mode == THUMB_MODE:  # thumb mode
         thumb_files = convert_vcf_file_to_thumbs(vcf)
-        print("loaded {0} vcards, from file: {1}".format(len(thumb_files), filename))
+        print("loaded {0} vcards".format(len(thumb_files)))
     elif mode == SPLIT_MODE:  # split mode
         vcf_files = split_vcf_file(vcf)
-        print("file {1} was split into {0} single vcard file(s)".format(len(vcf_files), filename))
+        print("created {0} single vcard file(s)".format(len(vcf_files)))
     elif mode == UNITY_MODE:  # naut mode
         vcf_files = split_vcf_file(vcf)
-        print("file {1} was split into {0} unity desktop folder(s)".format(len(vcf_files), filename))
+        print("created {0} unity desktop folder(s)".format(len(vcf_files)))
         for vcf_file_name in vcf_files:
             with open(vcf_file_name, 'r', encoding=UTF) as tf:
                 thumb_file_name = convert_vcf_file_to_thumbs(tf)[0]  # create thumb file
