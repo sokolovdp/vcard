@@ -230,14 +230,14 @@ def split_vcf_file(vfile: io.TextIOWrapper) -> list:
     return files_names
 
 
-def convert_vcf_file_to_thumbs(vfile: io.TextIOWrapper) -> list:
+def create_thumbs(list_of_cards: list, base_name: str) -> list:
     """
     Convert vcard file into thumbs files.
     vfile:  file object in opened state
     Return list of strings with created thumb file names
     """
-    list_of_cards = parse_vcf_file(vfile)
-    base_name = get_short_filename(vfile.name)
+    # list_of_cards = parse_vcf_file(vfile)
+    # base_name = get_short_filename(vfile.name)
     thumb_files = list()
     if len(list_of_cards) == 1:  # single vcard file
         card = list_of_cards[0]
@@ -298,17 +298,19 @@ def process_vcf_file(filename: str, thumbs_dir: str, mode: int):
     current_directory = os.getcwd()
     os.chdir(thumbs_dir)
     if mode == THUMB_MODE:  # thumb mode
-        thumb_files = convert_vcf_file_to_thumbs(vcf)
-        print("loaded {0} vcards".format(len(thumb_files)))
+        parsed_vcard_list = parse_vcf_file(vcf)
+        print("loaded {0} vcards".format(len(parsed_vcard_list)))
+        thumb_files = create_thumbs(parsed_vcard_list, vcf.name)
+        print("created {0} thumb files".format(len(thumb_files)))
     elif mode == SPLIT_MODE:  # split mode
         vcf_files = split_vcf_file(vcf)
-        print("created {0} single vcard file(s)".format(len(vcf_files)))
+        print("original file {0} was split into {1} single vcard file(s)".format(vcf.name, len(vcf_files)))
     elif mode == UNITY_MODE:  # naut mode
         vcf_files = split_vcf_file(vcf)
         print("created {0} unity desktop folder(s)".format(len(vcf_files)))
         for vcf_file_name in vcf_files:
             with open(vcf_file_name, 'r', encoding=UTF) as tf:
-                thumb_file_name = convert_vcf_file_to_thumbs(tf)[0]  # create thumb file
+                thumb_file_name = create_thumbs(parse_vcf_file(tf), tf.name)[0]  # create thumb file
             new_dir = get_short_filename(vcf_file_name)
             create_output_directory(new_dir)
             shutil.move(vcf_file_name, new_dir)
@@ -478,9 +480,10 @@ if __name__ == '__main__':
     if args.file:  # create list of vcf files to processing
         files_for_parsing.append(args.file)
     else:
-        files_for_parsing = [os.path.join(args.dir, file) for file in os.listdir(args.dir) if file.endswith('.vcf')]
+        files_for_parsing = [os.path.join(args.dir, file) for file in os.listdir(args.dir)
+                             if file.endswith('.vcf') or file.endswith('.vcard')]
         if not files_for_parsing:
-            print('no vcf files in the directory: {0}'.format(args.dir))
+            print('no vcf(vcard) files in the directory: {0}'.format(args.dir))
             exit()
 
     main(files_for_parsing, out_dir, args.mode)
